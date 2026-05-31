@@ -94,7 +94,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           
           <div className="hud-badge" style={{ gap: '10px' }}>
             <span className="hud-badge-icon">👥</span>
-            <span style={{ fontSize: '11px' }}>
+            <span style={{ fontSize: '13px' }}>
               <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>{workingCount}</span>
               <span style={{ color: 'var(--text-muted)' }}> / {totalCount} Online</span>
             </span>
@@ -105,7 +105,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           <div className="hud-badge">
             <span className="hud-badge-icon">💰</span>
             <span className="hud-badge-value">12,450</span>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>GP</span>
+            <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>GP</span>
           </div>
           <div className="hud-badge">
             <span className="hud-badge-icon">💎</span>

@@ -37,7 +37,7 @@ export const RestockGrid: React.FC = () => {
         <div className="panel-card-header">
           <span className="panel-card-title">📦 STOCK LEVELS</span>
         </div>
-        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '12px'}}>
+        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '14px'}}>
           Syncing with Backend...
         </div>
       </div>
@@ -58,7 +58,7 @@ export const RestockGrid: React.FC = () => {
             <div key={item.id || i} className="restock-item">
               <div>
                 <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.name}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
                   Min: {item.threshold} units | ฿{item.price?.toLocaleString()}
                 </div>
               </div>
@@ -80,7 +80,7 @@ export const RestockGrid: React.FC = () => {
           );
         })}
         {items.length === 0 && (
-          <div style={{padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px'}}>
+          <div style={{padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px'}}>
             No items in inventory. Check Backend.
           </div>
         )}

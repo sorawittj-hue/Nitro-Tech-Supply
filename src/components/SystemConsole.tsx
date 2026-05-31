@@ -34,7 +34,7 @@ export const SystemConsole: React.FC<SystemConsoleProps> = ({ logs, onClearLogs 
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <span className="panel-card-title">📟 SYSTEM LOG</span>
-        <button onClick={onClearLogs} className="btn-icon" title="Clear logs" style={{ width: '28px', height: '28px', fontSize: '12px' }}>
+        <button onClick={onClearLogs} className="btn-icon" title="Clear logs" style={{ width: '28px', height: '28px', fontSize: '14px' }}>
           🗑️
         </button>
       </div>
@@ -57,7 +57,7 @@ export const SystemConsole: React.FC<SystemConsoleProps> = ({ logs, onClearLogs 
 
       <div style={{ 
         display: 'flex', justifyContent: 'space-between', 
-        fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)',
+        fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'var(--text-muted)',
         borderTop: '1px solid var(--border-subtle)', paddingTop: '8px', marginTop: '8px'
       }}>
         <span>{logs.length} entries</span>

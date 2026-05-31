@@ -106,13 +106,13 @@ export const LofiPlayer: React.FC = () => {
 
       <div className="lofi-controls">
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button onClick={prevTrack} className="btn-icon" style={{ width: '28px', height: '28px', fontSize: '10px' }}>⏮</button>
+          <button onClick={prevTrack} className="btn-icon" style={{ width: '28px', height: '28px', fontSize: '14px' }}>⏮</button>
           <button onClick={togglePlay} className={`play-btn ${isPlaying ? 'playing' : ''}`}>
             {isPlaying ? '⏸' : '▶'}
           </button>
-          <button onClick={nextTrack} className="btn-icon" style={{ width: '28px', height: '28px', fontSize: '10px' }}>⏭</button>
+          <button onClick={nextTrack} className="btn-icon" style={{ width: '28px', height: '28px', fontSize: '14px' }}>⏭</button>
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'var(--text-muted)' }}>
           {currentTrack + 1}/{TRACKS.length}
         </div>
       </div>

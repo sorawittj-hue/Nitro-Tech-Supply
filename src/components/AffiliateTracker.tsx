@@ -51,7 +51,7 @@ export const AffiliateTracker: React.FC = () => {
         <div className="panel-card-header">
           <span className="panel-card-title">📊 AFFILIATE INCOME</span>
         </div>
-        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '12px'}}>
+        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '14px'}}>
           Syncing with Backend...
         </div>
       </div>
@@ -65,7 +65,7 @@ export const AffiliateTracker: React.FC = () => {
         <button
           onClick={fetchAffiliateData}
           className="btn-icon"
-          style={{ width: '26px', height: '26px', fontSize: '11px' }}
+          style={{ width: '26px', height: '26px', fontSize: '13px' }}
           title="Refresh Data"
         >
           🔄
@@ -91,9 +91,9 @@ export const AffiliateTracker: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
         <span>Updated: {lastUpdated}</span>
-        <button onClick={handleDownloadReport} className="btn btn-ghost" style={{ fontSize: '10px', padding: '4px 8px' }}>
+        <button onClick={handleDownloadReport} className="btn btn-ghost" style={{ fontSize: '14px', padding: '4px 8px' }}>
           📥 Report
         </button>
       </div>

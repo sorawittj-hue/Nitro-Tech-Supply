@@ -33,7 +33,7 @@ export const ActiveOrders: React.FC = () => {
         <div className="panel-card-header">
           <span className="panel-card-title">🚚 ACTIVE ORDERS</span>
         </div>
-        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '12px'}}>
+        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '14px'}}>
           Syncing with Backend...
         </div>
       </div>
@@ -52,7 +52,7 @@ export const ActiveOrders: React.FC = () => {
           <div key={order.id || i} className="restock-item">
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--accent-cyan)', fontWeight: 600, fontSize: '11px' }}>ORD-{order.id}</span>
+                <span style={{ color: 'var(--accent-cyan)', fontWeight: 600, fontSize: '13px' }}>ORD-{order.id}</span>
                 <span className={`badge ${
                   order.status.toLowerCase() === 'delivered' ? 'badge-success' : 
                   order.status.toLowerCase() === 'shipping' ? 'badge-warning' : 'badge-info'
@@ -60,8 +60,8 @@ export const ActiveOrders: React.FC = () => {
                   {order.status.toUpperCase()}
                 </span>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginTop: '4px' }}>{order.customer}</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-primary)', marginTop: '4px' }}>{order.customer}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 <span>{order.item} x{order.quantity}</span>
                 <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>฿{order.value?.toLocaleString()}</span>
               </div>
@@ -69,7 +69,7 @@ export const ActiveOrders: React.FC = () => {
           </div>
         ))}
         {orders.length === 0 && (
-          <div style={{padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px'}}>
+          <div style={{padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px'}}>
             No active orders. Check Backend.
           </div>
         )}

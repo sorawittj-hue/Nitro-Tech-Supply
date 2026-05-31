@@ -257,7 +257,7 @@ export default function App() {
                   <div className="panel-card-header">
                     <span className="panel-card-title">SHARED SKILL.MD</span>
                   </div>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
+                  <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
                     คู่มือแนวทางกลาง — บอททุกตัวดึงเอกสารนี้ไปใช้
                   </p>
                   <textarea
@@ -289,12 +289,12 @@ export default function App() {
                   <div className="panel-card-header">
                     <span className="panel-card-title">🤖 AI INTEGRATION (XIAOMI MIMO)</span>
                   </div>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
+                  <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
                     ตั้งค่า API เพื่อเชื่อมต่อระบบสมองกลให้ Team Chat
                   </p>
                   
                   <div style={{ marginBottom: '8px' }}>
-                    <label style={{ fontSize: '10px', color: 'var(--accent-cyan)' }}>API KEY</label>
+                    <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>API KEY</label>
                     <input
                       type="password"
                       value={mimoApiKey}
@@ -306,7 +306,7 @@ export default function App() {
                   </div>
 
                   <div style={{ marginBottom: '8px' }}>
-                    <label style={{ fontSize: '10px', color: 'var(--accent-cyan)' }}>BASE URL</label>
+                    <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>BASE URL</label>
                     <input
                       type="text"
                       value={mimoBaseUrl}
@@ -318,7 +318,7 @@ export default function App() {
                   </div>
 
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '10px', color: 'var(--accent-cyan)' }}>MODEL</label>
+                    <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>MODEL</label>
                     <input
                       type="text"
                       value={mimoModel}

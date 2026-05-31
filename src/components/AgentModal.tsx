@@ -139,7 +139,7 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
 
           {activeTab === 'individual' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>แก้ไขสกิลของ {agent.name.split('(')[0].trim()}</span>
                 <span style={{ color: 'var(--accent-cyan)' }}>📁 {agent.id}_skill.md</span>
               </div>
@@ -154,7 +154,7 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
 
           {activeTab === 'shared' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>คู่มือรวม (Shared Guidelines)</span>
                 <span style={{ color: 'var(--accent-emerald)' }}>📁 shared_skill.md</span>
               </div>

@@ -47,7 +47,7 @@ export const AnalyticsView: React.FC = () => {
     backgroundColor: 'var(--bg-deep, #0a0f1a)',
     border: '1px solid rgba(148,163,184,0.15)',
     borderRadius: '6px',
-    fontSize: '11px',
+    fontSize: '13px',
     fontFamily: 'JetBrains Mono, monospace',
   };
 
