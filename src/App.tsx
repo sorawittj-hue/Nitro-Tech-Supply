@@ -25,7 +25,7 @@ export default function App() {
   const [sharedSkillText, setSharedSkillText] = useState<string>(initialAgents[0].sharedSkill);
   const [currentTime, setCurrentTime] = useState<string>('');
   const [mimoApiKey, setMimoApiKey] = useState<string>(() => localStorage.getItem('mimoApiKey') || 'sk-sb0havy7743zlf72xq550uqrnqint2igxw54bzg87dcmj43j');
-  const [mimoBaseUrl, setMimoBaseUrl] = useState<string>(() => localStorage.getItem('mimoBaseUrl') || 'https://token-plan-sgp.xiaomimimo.com/v1');
+  const [mimoBaseUrl, setMimoBaseUrl] = useState<string>(() => 'https://api.xiaomimimo.com/v1');
   const [mimoModel, setMimoModel] = useState<string>(() => localStorage.getItem('mimoModel') || 'mimo-v2.5-pro');
 
   useEffect(() => {
