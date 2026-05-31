@@ -1,47 +1,89 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-const restockItems = [
-  { name: 'RTX 4070 Super', stock: 42, threshold: 20, status: 'ok' },
-  { name: 'RTX 4060', stock: 18, threshold: 20, status: 'low' },
-  { name: 'Ryzen 7 7800X3D', stock: 55, threshold: 15, status: 'ok' },
-  { name: 'DDR5 32GB Kit', stock: 8, threshold: 25, status: 'critical' },
-  { name: 'NVMe SSD 1TB', stock: 34, threshold: 20, status: 'ok' },
-  { name: 'B650 Motherboard', stock: 12, threshold: 15, status: 'low' },
-];
+interface InventoryItem {
+  id: string;
+  name: string;
+  stock: number;
+  threshold: number;
+  price: number;
+}
 
 export const RestockGrid: React.FC = () => {
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('http://localhost:3001/inventory')
+      .then(r => r.json())
+      .then(data => {
+        setItems(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Backend not running", err);
+        setLoading(false);
+      });
+  }, []);
+
+  const getStatus = (stock: number, threshold: number) => {
+    if (stock <= threshold * 0.5) return 'critical';
+    if (stock <= threshold) return 'low';
+    return 'ok';
+  };
+
+  if (loading) {
+    return (
+      <div className="panel-card">
+        <div className="panel-card-header">
+          <span className="panel-card-title">📦 STOCK LEVELS</span>
+        </div>
+        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '12px'}}>
+          Syncing with Backend...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="panel-card">
       <div className="panel-card-header">
         <span className="panel-card-title">📦 STOCK LEVELS</span>
-        <span className="badge badge-warning">{restockItems.filter(i => i.status !== 'ok').length} ALERTS</span>
+        <span className="badge badge-warning">{items.filter(i => getStatus(i.stock, i.threshold) !== 'ok').length} ALERTS</span>
       </div>
 
       <div>
-        {restockItems.map((item, i) => (
-          <div key={i} className="restock-item">
-            <div>
-              <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.name}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                Min: {item.threshold} units
+        {items.map((item, i) => {
+          const status = getStatus(item.stock, item.threshold);
+          return (
+            <div key={item.id || i} className="restock-item">
+              <div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.name}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                  Min: {item.threshold} units | ฿{item.price?.toLocaleString()}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ 
+                  fontWeight: 700, 
+                  color: status === 'critical' ? 'var(--accent-rose)' : 
+                         status === 'low' ? 'var(--accent-amber)' : 'var(--accent-emerald)',
+                  fontFamily: 'var(--font-retro)',
+                  fontSize: '18px'
+                }}>
+                  {item.stock}
+                </span>
+                <span className={`badge ${status === 'critical' ? 'badge-danger' : status === 'low' ? 'badge-warning' : 'badge-success'}`}>
+                  {status === 'critical' ? 'CRITICAL' : status === 'low' ? 'LOW' : 'OK'}
+                </span>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ 
-                fontWeight: 700, 
-                color: item.status === 'critical' ? 'var(--accent-rose)' : 
-                       item.status === 'low' ? 'var(--accent-amber)' : 'var(--accent-emerald)',
-                fontFamily: 'var(--font-retro)',
-                fontSize: '18px'
-              }}>
-                {item.stock}
-              </span>
-              <span className={`badge ${item.status === 'critical' ? 'badge-danger' : item.status === 'low' ? 'badge-warning' : 'badge-success'}`}>
-                {item.status === 'critical' ? 'CRITICAL' : item.status === 'low' ? 'LOW' : 'OK'}
-              </span>
-            </div>
+          );
+        })}
+        {items.length === 0 && (
+          <div style={{padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px'}}>
+            No items in inventory. Check Backend.
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

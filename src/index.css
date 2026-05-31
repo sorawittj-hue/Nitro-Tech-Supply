@@ -537,20 +537,24 @@ body {
 .agent-sprite-wrapper {
   position: relative;
   transition: transform var(--transition-bounce);
-  animation: float 3s ease-in-out infinite;
+  animation: breathe 3s ease-in-out infinite;
+  transform-origin: bottom center;
 }
 
 .agent-sprite-wrapper.napping {
   animation: nap-bob 2s ease-in-out infinite;
+  transform-origin: bottom center;
   filter: brightness(0.7) saturate(0.5);
 }
 
 .agent-sprite-wrapper.thinking {
-  animation: float 2s ease-in-out infinite;
+  animation: breathe 2s ease-in-out infinite;
+  transform-origin: bottom center;
 }
 
 .agent-sprite-wrapper.idle {
-  animation: float 4s ease-in-out infinite;
+  animation: breathe 4s ease-in-out infinite;
+  transform-origin: bottom center;
   filter: brightness(0.85);
 }
 

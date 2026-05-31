@@ -1,88 +1,93 @@
 import React, { useState, useEffect } from 'react';
 
+interface AffiliateData {
+  totalClicks: number;
+  conversions: number;
+  revenueTHB: number;
+}
+
 export const AffiliateTracker: React.FC = () => {
-  const [usdToThb, setUsdToThb] = useState<number>(32.61);
-  const [isLoadingRate, setIsLoadingRate] = useState<boolean>(false);
-  const [synnexCommission, setSynnexCommission] = useState<number>(13.57);
-  const [adviceCommission, setAdviceCommission] = useState<number>(16.59);
+  const [data, setData] = useState<AffiliateData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('—');
 
-  const fetchRate = async () => {
-    setIsLoadingRate(true);
+  const fetchAffiliateData = async () => {
     try {
-      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      const res = await fetch('http://localhost:3001/affiliate');
       if (res.ok) {
-        const data = await res.json();
-        if (data.rates?.THB) {
-          setUsdToThb(Number(data.rates.THB.toFixed(2)));
-          setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }));
-        }
+        const json = await res.json();
+        setData(json);
+        setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }));
       }
-    } catch { /* */ } finally {
-      setIsLoadingRate(false);
+    } catch (err) {
+      console.error("Backend not running", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRate();
-    const interval = setInterval(fetchRate, 300000);
+    fetchAffiliateData();
+    const interval = setInterval(fetchAffiliateData, 10000); // refresh every 10s
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (Math.random() > 0.6) setSynnexCommission(p => Number((p + Math.random() * 0.05).toFixed(2)));
-      if (Math.random() > 0.7) setAdviceCommission(p => Number((p + Math.random() * 0.08).toFixed(2)));
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const totalUSD = synnexCommission + adviceCommission;
-  const totalTHB = totalUSD * usdToThb;
 
   const handleDownloadReport = () => {
+    if (!data) return;
     const ts = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
-    const report = `== DROPSHIP COMMISSION REPORT ==\nGenerated: ${ts}\nRate: 1 USD = ${usdToThb} THB\n\nSynnex: $${synnexCommission.toFixed(2)}\nAdvice: $${adviceCommission.toFixed(2)}\nTotal: $${totalUSD.toFixed(2)} / ฿${totalTHB.toFixed(2)}\n`;
+    const report = `== AFFILIATE INCOME REPORT ==\nGenerated: ${ts}\n\nTotal Clicks: ${data.totalClicks}\nConversions: ${data.conversions}\nTotal Revenue: ฿${data.revenueTHB.toFixed(2)}\n`;
     const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `report_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `affiliate_report_${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  if (loading && !data) {
+    return (
+      <div className="panel-card">
+        <div className="panel-card-header">
+          <span className="panel-card-title">📊 AFFILIATE INCOME</span>
+        </div>
+        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '12px'}}>
+          Syncing with Backend...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="panel-card">
       <div className="panel-card-header">
-        <span className="panel-card-title">📊 DROPSHIP INCOME</span>
+        <span className="panel-card-title">📊 AFFILIATE INCOME</span>
         <button
-          onClick={fetchRate}
-          disabled={isLoadingRate}
+          onClick={fetchAffiliateData}
           className="btn-icon"
           style={{ width: '26px', height: '26px', fontSize: '11px' }}
-          title="Refresh rate"
+          title="Refresh Data"
         >
-          {isLoadingRate ? '⏳' : '🔄'}
+          🔄
         </button>
       </div>
 
       <div className="income-display">
         <span className="income-currency">฿</span>
-        <span className="income-amount">{totalTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        <span className="income-amount">{data?.revenueTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
       </div>
       <div className="income-sub">
-        ${totalUSD.toFixed(2)} USD · @{usdToThb} THB/USD
+        TOTAL REVENUE (THB)
       </div>
 
       <div style={{ borderTop: '1px solid var(--border-subtle)', margin: '12px 0', paddingTop: '12px' }}>
         <div className="breakdown-item">
-          <span className="breakdown-label">🍊 Synnex Partner</span>
-          <span className="breakdown-value">${synnexCommission.toFixed(2)}</span>
+          <span className="breakdown-label">🔗 Total Clicks</span>
+          <span className="breakdown-value">{data?.totalClicks.toLocaleString()}</span>
         </div>
         <div className="breakdown-item">
-          <span className="breakdown-label">🟦 Advice Dropship</span>
-          <span className="breakdown-value">${adviceCommission.toFixed(2)}</span>
+          <span className="breakdown-label">🎯 Conversions</span>
+          <span className="breakdown-value">{data?.conversions.toLocaleString()}</span>
         </div>
       </div>
 

@@ -24,6 +24,15 @@ export default function App() {
   const [activePanel, setActivePanel] = useState<PanelId>('none');
   const [sharedSkillText, setSharedSkillText] = useState<string>(initialAgents[0].sharedSkill);
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [mimoApiKey, setMimoApiKey] = useState<string>(() => localStorage.getItem('mimoApiKey') || 'sk-sb0havy7743zlf72xq550uqrnqint2igxw54bzg87dcmj43j');
+  const [mimoBaseUrl, setMimoBaseUrl] = useState<string>(() => localStorage.getItem('mimoBaseUrl') || 'https://token-plan-sgp.xiaomimimo.com/v1');
+  const [mimoModel, setMimoModel] = useState<string>(() => localStorage.getItem('mimoModel') || 'mimo-v2.5-pro');
+
+  useEffect(() => {
+    localStorage.setItem('mimoApiKey', mimoApiKey);
+    localStorage.setItem('mimoBaseUrl', mimoBaseUrl);
+    localStorage.setItem('mimoModel', mimoModel);
+  }, [mimoApiKey, mimoBaseUrl, mimoModel]);
 
   // Clock
   useEffect(() => {
@@ -194,7 +203,12 @@ export default function App() {
                   <SystemConsole logs={logs} onClearLogs={() => setLogs([])} />
                 )}
                 {activePanel === 'chat' && (
-                  <TeamChat agents={agents} />
+                  <TeamChat 
+                    agents={agents} 
+                    mimoApiKey={mimoApiKey} 
+                    mimoBaseUrl={mimoBaseUrl} 
+                    mimoModel={mimoModel} 
+                  />
                 )}
                 {activePanel === 'income' && (
                   <>
@@ -269,6 +283,57 @@ export default function App() {
                       💾 SAVE SHARED SKILLS
                     </button>
                   </div>
+                </div>
+
+                <div className="panel-card">
+                  <div className="panel-card-header">
+                    <span className="panel-card-title">🤖 AI INTEGRATION (XIAOMI MIMO)</span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
+                    ตั้งค่า API เพื่อเชื่อมต่อระบบสมองกลให้ Team Chat
+                  </p>
+                  
+                  <div style={{ marginBottom: '8px' }}>
+                    <label style={{ fontSize: '10px', color: 'var(--accent-cyan)' }}>API KEY</label>
+                    <input
+                      type="password"
+                      value={mimoApiKey}
+                      onChange={(e) => setMimoApiKey(e.target.value)}
+                      className="chat-input-field"
+                      placeholder="sk-..."
+                      style={{ width: '100%', marginTop: '4px' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '8px' }}>
+                    <label style={{ fontSize: '10px', color: 'var(--accent-cyan)' }}>BASE URL</label>
+                    <input
+                      type="text"
+                      value={mimoBaseUrl}
+                      onChange={(e) => setMimoBaseUrl(e.target.value)}
+                      className="chat-input-field"
+                      placeholder="https://api..."
+                      style={{ width: '100%', marginTop: '4px' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '10px', color: 'var(--accent-cyan)' }}>MODEL</label>
+                    <input
+                      type="text"
+                      value={mimoModel}
+                      onChange={(e) => setMimoModel(e.target.value)}
+                      className="chat-input-field"
+                      placeholder="mimo-v2.5-pro"
+                      style={{ width: '100%', marginTop: '4px' }}
+                    />
+                  </div>
+
+                  {mimoApiKey ? (
+                    <div className="badge badge-success">✅ MiMo API Ready</div>
+                  ) : (
+                    <div className="badge badge-warning">⚠️ No API Key (using mock data)</div>
+                  )}
                 </div>
 
                 <div className="panel-card">

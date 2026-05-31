@@ -1,0 +1,17 @@
+{
+  "inventory": [
+    { "id": "1", "name": "ASUS ROG RTX 4070 Ti", "stock": 45, "threshold": 20, "price": 28900 },
+    { "id": "2", "name": "AMD Ryzen 7 7800X3D", "stock": 12, "threshold": 15, "price": 14500 },
+    { "id": "3", "name": "Corsair Vengeance DDR5 32GB", "stock": 8, "threshold": 30, "price": 4200 },
+    { "id": "4", "name": "Samsung 990 PRO 2TB", "stock": 65, "threshold": 20, "price": 6500 }
+  ],
+  "orders": [
+    { "id": "1", "customer": "Advice IT (สาขาปิ่นเกล้า)", "item": "ASUS ROG RTX 4070 Ti", "quantity": 10, "status": "Pending", "date": "2026-05-31", "value": 289000 },
+    { "id": "2", "customer": "JIB Computer Group", "item": "AMD Ryzen 7 7800X3D", "quantity": 5, "status": "Shipped", "date": "2026-05-30", "value": 72500 }
+  ],
+  "affiliate": {
+    "totalClicks": 12450,
+    "conversions": 892,
+    "revenueTHB": 154200.50
+  }
+}
