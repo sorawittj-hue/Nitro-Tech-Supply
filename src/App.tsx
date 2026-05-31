@@ -26,16 +26,14 @@ export default function App() {
     activePanel,
     sharedSkillText,
     currentTime,
-    mimoApiKey,
-    mimoBaseUrl,
-    mimoModel,
+    geminiApiKey,
+    geminiModel,
     setSharedSkillText,
     setSelectedAgent,
     setActivePanel,
     setLogs,
-    setMimoApiKey,
-    setMimoBaseUrl,
-    setMimoModel,
+    setGeminiApiKey,
+    setGeminiModel,
     handleUpdateAgent,
     handleWakeAgent,
     togglePanel,
@@ -47,7 +45,16 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="app-root">
-        <KeyboardShortcuts />
+        <KeyboardShortcuts 
+          togglePanel={togglePanel}
+          setActivePanel={setActivePanel}
+          addLog={addLog}
+          clearLogs={() => setLogs([])}
+          focusSearch={() => {
+            const input = document.getElementById('global-search') as HTMLInputElement | null;
+            if (input) input.focus();
+          }}
+        />
         <ToastContainer />
 
         <SearchBar
@@ -117,7 +124,7 @@ export default function App() {
                     <SystemConsole logs={logs as ConsoleLog[]} onClearLogs={() => setLogs([])} />
                   )}
                   {activePanel === 'chat' && (
-                    <TeamChat agents={agents} mimoApiKey={mimoApiKey} mimoBaseUrl={mimoBaseUrl} mimoModel={mimoModel} />
+                    <TeamChat agents={agents} geminiApiKey={geminiApiKey} geminiModel={geminiModel} />
                   )}
                   {activePanel === 'income' && (
                     <>
@@ -191,29 +198,24 @@ export default function App() {
 
                   <div className="panel-card">
                     <div className="panel-card-header">
-                      <span className="panel-card-title">🤖 AI INTEGRATION (XIAOMI MIMO)</span>
+                      <span className="panel-card-title">🤖 GOOGLE GEMINI API INTEGRATION</span>
                     </div>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
-                      ตั้งค่า API เพื่อเชื่อมต่อระบบสมองกลให้ Team Chat
+                      ตั้งค่า API เพื่อเชื่อมต่อสมองกล Google Gemini ให้กับ Team Chat
                     </p>
 
                     <div style={{ marginBottom: '8px' }}>
-                      <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>API KEY</label>
-                      <input type="password" value={mimoApiKey} onChange={(e) => setMimoApiKey(e.target.value)} className="chat-input-field" placeholder="sk-..." style={{ width: '100%', marginTop: '4px' }} />
-                    </div>
-
-                    <div style={{ marginBottom: '8px' }}>
-                      <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>BASE URL</label>
-                      <input type="text" value={mimoBaseUrl} onChange={(e) => setMimoBaseUrl(e.target.value)} className="chat-input-field" placeholder="https://api..." style={{ width: '100%', marginTop: '4px' }} />
+                      <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>GEMINI API KEY</label>
+                      <input type="password" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} className="chat-input-field" placeholder="AIzaSy..." style={{ width: '100%', marginTop: '4px' }} />
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
                       <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>MODEL</label>
-                      <input type="text" value={mimoModel} onChange={(e) => setMimoModel(e.target.value)} className="chat-input-field" placeholder="mimo-v2.5-pro" style={{ width: '100%', marginTop: '4px' }} />
+                      <input type="text" value={geminiModel} onChange={(e) => setGeminiModel(e.target.value)} className="chat-input-field" placeholder="gemini-3-flash-preview" style={{ width: '100%', marginTop: '4px' }} />
                     </div>
 
-                    {mimoApiKey ? (
-                      <div className="badge badge-success">✅ MiMo API Ready</div>
+                    {geminiApiKey ? (
+                      <div className="badge badge-success">✅ Gemini API Ready</div>
                     ) : (
                       <div className="badge badge-warning">⚠️ No API Key (using mock data)</div>
                     )}

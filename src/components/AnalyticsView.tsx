@@ -1,47 +1,60 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-
-const initialRevenueData = [
-  { time: '10:00', revenue: 980400 },
-  { time: '10:15', revenue: 980450 },
-  { time: '10:30', revenue: 980420 },
-  { time: '10:45', revenue: 980550 },
-  { time: '11:00', revenue: 980680 },
-  { time: '11:15', revenue: 980600 },
-  { time: '11:30', revenue: 980750 },
-  { time: '11:45', revenue: 980983 },
-];
-
-const initialDailySalesData = [
-  { day: '05-21', sales: 45000 },
-  { day: '05-22', sales: 32000 },
-  { day: '05-23', sales: 58000 },
-  { day: '05-24', sales: 61000 },
-  { day: '05-25', sales: 29000 },
-  { day: '05-26', sales: 74000 },
-  { day: '05-27', sales: 98343 },
-];
+import { useApp } from '../context/AppContext';
 
 export const AnalyticsView: React.FC = () => {
-  const [realizedSales] = useState(98343);
-  const [pendingInvoices, setPendingInvoices] = useState(-12500);
-  const [revenueData, setRevenueData] = useState(initialRevenueData);
-  const [dailySalesData] = useState(initialDailySalesData);
+  const { inventory, orders, finance, loadingData } = useApp();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPendingInvoices(prev => Number((prev + (Math.random() - 0.45) * 500).toFixed(2)));
-      setRevenueData(prev => {
-        const lastVal = prev[prev.length - 1].revenue;
-        const delta = (Math.random() - 0.4) * 80;
-        const t = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        return [...prev.slice(1), { time: t, revenue: Number((lastVal + delta).toFixed(2)) }];
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  if (loadingData) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+        Loading sales and inventory metrics...
+      </div>
+    );
+  }
 
-  const totalSales = realizedSales + pendingInvoices;
+  // Calculate live financial metrics
+  const cashOnHand = finance?.cashOnHand ?? 680000;
+  const inventoryValue = inventory.reduce((sum, item) => sum + item.stock * item.price, 0);
+  const pendingInvoices = orders
+    .filter(o => o.status === 'Pending')
+    .reduce((sum, o) => sum + o.value, 0);
+  
+  const realizedSales = orders
+    .filter(o => o.status !== 'Pending')
+    .reduce((sum, o) => sum + o.value, 0);
+
+  const totalCapital = cashOnHand + inventoryValue + pendingInvoices;
+
+  const totalOrdersCount = orders.length;
+  const completedOrders = orders.filter(o => o.status !== 'Pending');
+  const completedOrdersCount = completedOrders.length;
+  
+  const fulfillmentRate = totalOrdersCount > 0 
+    ? (completedOrdersCount / totalOrdersCount) * 100 
+    : 100;
+
+  // Group by date for Daily Order Volumes
+  const dailyMap: Record<string, number> = {};
+  orders.forEach(o => {
+    const formattedDate = o.date.length >= 10 ? o.date.slice(5) : o.date; // MM-DD
+    dailyMap[formattedDate] = (dailyMap[formattedDate] || 0) + o.value;
+  });
+
+  const dailySalesData = Object.entries(dailyMap)
+    .map(([day, sales]) => ({ day, sales }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+
+  // Generate cumulative revenue data over time
+  const sortedDays = Object.keys(dailyMap).sort();
+  const revenueData = sortedDays.reduce((acc, day) => {
+    const prevRevenue = acc.length > 0 ? acc[acc.length - 1].revenue : 0;
+    acc.push({
+      time: day,
+      revenue: prevRevenue + dailyMap[day]
+    });
+    return acc;
+  }, [] as Array<{ time: string; revenue: number }>);
 
   const tooltipStyle = {
     backgroundColor: 'var(--bg-deep, #0a0f1a)',
@@ -57,12 +70,14 @@ export const AnalyticsView: React.FC = () => {
       <div className="analytics-grid">
         <div className="kpi-card">
           <div className="kpi-label">TOTAL CAPITAL (THB)</div>
-          <div className="kpi-value green">฿{(980000 + totalSales).toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>
+          <div className="kpi-value green">
+            ฿{totalCapital.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+          </div>
           <div className="kpi-sub">Assets + Cash Balance</div>
         </div>
 
         <div className="kpi-card">
-          <div className="kpi-label">TODAY'S SALES</div>
+          <div className="kpi-label">REALIZED SALES</div>
           <div className="kpi-value green">฿{realizedSales.toLocaleString()}</div>
           <div className="kpi-sub">Invoiced Bulk Orders</div>
         </div>
@@ -77,8 +92,8 @@ export const AnalyticsView: React.FC = () => {
 
         <div className="kpi-card">
           <div className="kpi-label">FULFILLMENT RATE</div>
-          <div className="kpi-value cyan">96.8%</div>
-          <div className="kpi-sub">122 Shipments Completed</div>
+          <div className="kpi-value cyan">{fulfillmentRate.toFixed(1)}%</div>
+          <div className="kpi-sub">{completedOrdersCount} Shipments Completed</div>
         </div>
       </div>
 
@@ -87,34 +102,49 @@ export const AnalyticsView: React.FC = () => {
         <div className="chart-card">
           <span className="panel-card-title">📈 REVENUE GROWTH (THB)</span>
           <div className="chart-area">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.08)" />
-                <XAxis dataKey="time" stroke="#475569" fontSize={10} tickLine={false} />
-                <YAxis stroke="#475569" fontSize={10} domain={['auto', 'auto']} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#22d3ee' }} />
-                <Line type="monotone" dataKey="revenue" stroke="#34d399" strokeWidth={2.5} dot={{ r: 3, fill: '#34d399', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            {revenueData.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No data points available.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.08)" />
+                  <XAxis dataKey="time" stroke="#475569" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#475569" fontSize={10} domain={['auto', 'auto']} tickLine={false} />
+                  <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#22d3ee' }} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#34d399" 
+                    strokeWidth={2.5} 
+                    dot={{ r: 3, fill: '#34d399', strokeWidth: 0 }} 
+                    activeDot={{ r: 6 }} 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
         <div className="chart-card">
           <span className="panel-card-title">📊 DAILY ORDER VOLUMES</span>
           <div className="chart-area">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.08)" />
-                <XAxis dataKey="day" stroke="#475569" fontSize={10} tickLine={false} />
-                <YAxis stroke="#475569" fontSize={10} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#22d3ee' }} />
-                <Bar dataKey="sales" radius={[4, 4, 0, 0]}>
-                  {dailySalesData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.sales >= 40000 ? '#34d399' : '#22d3ee'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {dailySalesData.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No sales data available.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailySalesData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.08)" />
+                  <XAxis dataKey="day" stroke="#475569" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#475569" fontSize={10} tickLine={false} />
+                  <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#22d3ee' }} />
+                  <Bar dataKey="sales" radius={[4, 4, 0, 0]}>
+                    {dailySalesData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.sales >= 100000 ? '#34d399' : '#22d3ee'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>

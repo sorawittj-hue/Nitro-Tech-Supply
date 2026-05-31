@@ -1,15 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useApp } from '../context/AppContext';
+import { useState } from 'react';
+import { useApp, type InventoryItem } from '../context/AppContext';
 import ConfirmationDialog from './ConfirmationDialog';
 import type { Agent } from '../data/agents';
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  stock: number;
-  threshold: number;
-  price: number;
-}
 
 function getStatus(stock: number, threshold: number) {
   if (stock <= threshold * 0.5) return 'critical';
@@ -17,26 +9,20 @@ function getStatus(stock: number, threshold: number) {
   return 'ok';
 }
 
-export const RestockGrid: React.FC<{ agents: Agent[] }> = ({ agents }) => {
-  const { addLog, addToast, addAuditLog } = useApp();
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export const RestockGrid: React.FC<{ agents?: Agent[] }> = () => {
+  const { 
+    inventory, 
+    loadingData, 
+    adjustStock, 
+    saveInventoryItem, 
+    deleteInventoryItem 
+  } = useApp();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', stock: 0, threshold: 10, price: 0 });
   const [error, setError] = useState('');
-  const apiBase = 'http://localhost:3001';
-
-  const fetchItems = useCallback(() => {
-    setLoading(true);
-    fetch(`${apiBase}/inventory`)
-      .then(r => r.json())
-      .then(data => { setItems(data); setLoading(false); })
-      .catch(err => { console.error(err); setLoading(false); addToast('error', 'ไม่สามารถโหลดสต็อกได้'); });
-  }, [addToast]);
-
-  useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const openCreate = () => {
     setForm({ name: '', stock: 0, threshold: 10, price: 0 });
@@ -57,116 +43,32 @@ export const RestockGrid: React.FC<{ agents: Agent[] }> = ({ agents }) => {
     return '';
   };
 
-  const saveItem = async () => {
+  const handleSaveItem = async () => {
     const validationError = validate();
     if (validationError) { setError(validationError); return; }
     try {
-      let saved: InventoryItem;
-      if (editingItem) {
-        const res = await fetch(`${apiBase}/inventory/${editingItem.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, id: editingItem.id }),
-        });
-        saved = await res.json();
-        setItems(prev => prev.map(i => i.id === editingItem.id ? saved : i));
-        addLog('INFO', `📝 อัปเดตสต็อก ${saved.name} → ${saved.stock} units`);
-        addAuditLog('Inventory Update', `${saved.name} stock ${saved.stock}`);
-        addToast('success', `อัปเดต ${saved.name} สำเร็จ`);
-      } else {
-        const res = await fetch(`${apiBase}/inventory`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, id: Date.now().toString() }),
-        });
-        saved = await res.json();
-        setItems(prev => [...prev, saved]);
-        addLog('INFO', `🆕 เพิ่มสินค้าใหม่: ${saved.name}`);
-        addAuditLog('Inventory Create', `New item ${saved.name}`);
-        addToast('success', `เพิ่มสินค้า ${saved.name} สำเร็จ`);
-      }
+      await saveInventoryItem({
+        ...form,
+        id: editingItem?.id
+      });
       setEditingItem(null);
       setError('');
     } catch (err) {
       console.error(err);
-      addToast('error', 'บันทึกไม่สำเร็จ');
     }
   };
 
-  const adjustStock = async (item: InventoryItem, delta: number) => {
-    const newStock = Math.max(0, item.stock + delta);
+  const handleDeleteItem = async (id: string) => {
     try {
-      const res = await fetch(`${apiBase}/inventory/${item.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...item, stock: newStock }),
-      });
-      const saved = await res.json();
-      setItems(prev => prev.map(i => i.id === item.id ? saved : i));
-      addLog('INFO', `📦 ปรับสต็อก ${item.name}: ${item.stock} → ${newStock}`);
-      addAuditLog('Stock Adjust', `${item.name} ${item.stock} → ${newStock}`);
-      addToast('info', `${item.name}: ${item.stock} → ${newStock}`);
-    } catch (err) {
-      console.error(err);
-      addToast('error', 'ปรับสต็อกไม่สำเร็จ');
-    }
-  };
-
-  const deleteItem = async (id: string) => {
-    try {
-      await fetch(`${apiBase}/inventory/${id}`, { method: 'DELETE' });
-      setItems(prev => prev.filter(i => i.id !== id));
-      addLog('INFO', `🗑️ ลบสินค้าออกจากคลัง ${id}`);
-      addAuditLog('Inventory Delete', `Deleted ${id}`);
-      addToast('success', 'ลบสินค้าสำเร็จ');
+      await deleteInventoryItem(id);
       setConfirmDeleteId(null);
     } catch (err) {
       console.error(err);
-      addToast('error', 'ลบไม่สำเร็จ');
     }
   };
 
-  const filtered = items.filter(i => !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  const alertCount = items.filter(i => getStatus(i.stock, i.threshold) !== 'ok').length;
-
-  const FormModal = () => (
-    <>
-      <div className="side-panel-overlay" onClick={() => { setEditingItem(null); setError(''); }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 7000, width: '400px', maxWidth: '90vw' }}>
-        <div className="panel-card">
-          <div className="side-panel-header">
-            <h2>{editingItem ? '✏️ EDIT ITEM' : '🆕 NEW ITEM'}</h2>
-            <button className="side-panel-close" onClick={() => { setEditingItem(null); setError(''); }}>✕</button>
-          </div>
-          <div className="side-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div>
-              <label className="form-label">ชื่อสินค้า</label>
-              <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <div style={{ flex: 1 }}>
-                <label className="form-label">Stock ปัจจุบัน</label>
-                <input className="form-input" type="number" min="0" value={form.stock} onChange={e => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label className="form-label">Min Threshold</label>
-                <input className="form-input" type="number" min="1" value={form.threshold} onChange={e => setForm({ ...form, threshold: parseInt(e.target.value) || 1 })} />
-              </div>
-            </div>
-            <div>
-              <label className="form-label">ราคา/หน่วย (THB)</label>
-              <input className="form-input" type="number" min="0" value={form.price} onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} />
-            </div>
-            {error && <div className="form-error">{error}</div>}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button className="btn btn-ghost" onClick={() => { setEditingItem(null); setError(''); }}>ยกเลิก</button>
-              <button className="btn btn-primary" onClick={saveItem}>💾 บันทึก</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+  const filtered = inventory.filter(i => !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const alertCount = inventory.filter(i => getStatus(i.stock, i.threshold) !== 'ok').length;
 
   return (
     <div className="panel-card">
@@ -180,7 +82,7 @@ export const RestockGrid: React.FC<{ agents: Agent[] }> = ({ agents }) => {
         <button className="btn btn-primary" onClick={openCreate}>+ ADD ITEM</button>
       </div>
 
-      {loading ? (
+      {loadingData ? (
         <div className="skeleton-block" />
       ) : filtered.length === 0 ? (
         <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>ไม่พบสินค้า</div>
@@ -208,7 +110,44 @@ export const RestockGrid: React.FC<{ agents: Agent[] }> = ({ agents }) => {
         </div>
       )}
 
-      {editingItem !== null && <FormModal />}
+      {editingItem !== null && (
+        <>
+          <div className="side-panel-overlay" onClick={() => { setEditingItem(null); setError(''); }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 7000, width: '400px', maxWidth: '90vw' }}>
+            <div className="panel-card">
+              <div className="side-panel-header">
+                <h2>{editingItem.id ? '✏️ EDIT ITEM' : '🆕 NEW ITEM'}</h2>
+                <button className="side-panel-close" onClick={() => { setEditingItem(null); setError(''); }}>✕</button>
+              </div>
+              <div className="side-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                  <label className="form-label">ชื่อสินค้า</label>
+                  <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label className="form-label">Stock ปัจจุบัน</label>
+                    <input className="form-input" type="number" min="0" value={form.stock} onChange={e => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label className="form-label">Min Threshold</label>
+                    <input className="form-input" type="number" min="1" value={form.threshold} onChange={e => setForm({ ...form, threshold: parseInt(e.target.value) || 1 })} />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">ราคา/หน่วย (THB)</label>
+                  <input className="form-input" type="number" min="0" value={form.price} onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} />
+                </div>
+                {error && <div className="form-error">{error}</div>}
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button className="btn btn-ghost" onClick={() => { setEditingItem(null); setError(''); }}>ยกเลิก</button>
+                  <button className="btn btn-primary" onClick={handleSaveItem}>💾 บันทึก</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <ConfirmationDialog
         open={!!confirmDeleteId}
@@ -217,7 +156,7 @@ export const RestockGrid: React.FC<{ agents: Agent[] }> = ({ agents }) => {
         confirmLabel="ลบ"
         cancelLabel="ยกเลิก"
         variant="danger"
-        onConfirm={() => confirmDeleteId && deleteItem(confirmDeleteId)}
+        onConfirm={() => confirmDeleteId && handleDeleteItem(confirmDeleteId)}
         onCancel={() => setConfirmDeleteId(null)}
       />
     </div>

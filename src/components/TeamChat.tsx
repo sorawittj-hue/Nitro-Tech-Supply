@@ -12,9 +12,8 @@ interface ChatMessage {
 
 interface TeamChatProps {
   agents: Agent[];
-  mimoApiKey?: string;
-  mimoBaseUrl?: string;
-  mimoModel?: string;
+  geminiApiKey?: string;
+  geminiModel?: string;
 }
 
 const generateAgentMessages = (): ChatMessage[] => {
@@ -67,7 +66,7 @@ const generateAgentMessages = (): ChatMessage[] => {
   return messages;
 };
 
-export const TeamChat: React.FC<TeamChatProps> = ({ agents, mimoApiKey, mimoBaseUrl, mimoModel }) => {
+export const TeamChat: React.FC<TeamChatProps> = ({ agents, geminiApiKey, geminiModel }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(() => generateAgentMessages());
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -123,7 +122,7 @@ export const TeamChat: React.FC<TeamChatProps> = ({ agents, mimoApiKey, mimoBase
     setInputText('');
     setIsTyping(true);
 
-    if (mimoApiKey && mimoBaseUrl) {
+    if (geminiApiKey) {
       try {
         const prompt = `คุณคือระบบ AI Team ที่ทำงานในบริษัท "Nitro Tech Supply" (ขายส่งและขายปลีกอุปกรณ์ IT)
 เจ้านายของคุณ (CEO เจ) เพิ่งส่งข้อความมาว่า: "${userText}"
@@ -137,28 +136,35 @@ ${agents.filter(a => a.id !== 'ceo_jay').map(a => `- ${a.name} (${a.title}): ${a
 3. ตัวอย่าง -> Max (B2B Sales): รับทราบครับบอส เดี๋ยวผมจัดการเช็คดีลให้เลย
 4. ตอบให้สั้น กระชับ เป็นมืออาชีพแต่มีความเป็นมนุษย์/มีชีวิตชีวา (ใช้อีโมจิได้นิดหน่อย)`;
 
-        const response = await fetch(`${mimoBaseUrl}/chat/completions`, {
+        const model = geminiModel || "gemini-3-flash-preview";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
+
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mimoApiKey}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: mimoModel || "mimo-v2.5-pro",
-            messages: [
-              { role: "system", content: "You are a helpful AI assistant simulating a team of workers." },
-              { role: "user", content: prompt }
-            ],
-            temperature: 0.7
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt
+                  }
+                ]
+              }
+            ]
           })
         });
 
         if (!response.ok) {
-          throw new Error(`API Error: ${response.status}`);
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.error?.message || `API Error: ${response.status}`;
+          throw new Error(errMsg);
         }
 
         const data = await response.json();
-        const resText = data.choices[0].message.content || '';
+        const resText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const parts = resText.split(':');
         
         let senderName = "System";
@@ -191,13 +197,14 @@ ${agents.filter(a => a.id !== 'ceo_jay').map(a => `- ${a.name} (${a.title}): ${a
           time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         }]);
 
-      } catch (err: any) {
-        console.error("MiMo API Error:", err);
+      } catch (err) {
+        console.error("Gemini API Error:", err);
+        const errMsg = err instanceof Error ? err.message : String(err);
         setMessages(prev => [...prev, {
           id: Date.now().toString() + 'err',
           sender: 'System',
           avatar: '⚠️',
-          text: `เกิดข้อผิดพลาดในการเชื่อมต่อ MiMo API (${err.message})`,
+          text: `เกิดข้อผิดพลาดในการเชื่อมต่อ Gemini API (${errMsg})`,
           time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         }]);
       } finally {
@@ -209,7 +216,7 @@ ${agents.filter(a => a.id !== 'ceo_jay').map(a => `- ${a.name} (${a.title}): ${a
           id: Date.now().toString() + 'mock',
           sender: 'Atlas',
           avatar: '🤖',
-          text: `(Mock) รับทราบครับ! (โปรดใส่ Xiaomi MiMo API Key ในหน้า Settings เพื่อคุยกับ AI จริง)`,
+          text: `(Mock) รับทราบครับ! (โปรดใส่ Google Gemini API Key ในหน้า Settings เพื่อคุยกับ AI จริง)`,
           time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         }]);
         setIsTyping(false);
@@ -220,7 +227,7 @@ ${agents.filter(a => a.id !== 'ceo_jay').map(a => `- ${a.name} (${a.title}): ${a
   return (
     <div className="chat-container" style={{ height: '100%', minHeight: '400px' }}>
       <div className="panel-card-header" style={{ marginBottom: '12px' }}>
-        <span className="panel-card-title">💬 TEAM CHAT {mimoApiKey ? '(MIMO AI)' : ''}</span>
+        <span className="panel-card-title">💬 TEAM CHAT {geminiApiKey ? '(GEMINI AI)' : ''}</span>
         <span className="badge badge-success">LIVE</span>
       </div>
 

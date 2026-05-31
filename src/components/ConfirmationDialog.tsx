@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React from 'react';
 
 interface ConfirmationDialogProps {
   open: boolean;
@@ -8,13 +8,14 @@ interface ConfirmationDialogProps {
   cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
-  variant?: 'danger' | 'warning' | 'info';
+  variant?: 'danger' | 'warning' | 'info' | 'success';
 }
 
 const variantStyles: Record<string, { accent: string; btnBg: string; btnColor: string; icon: string }> = {
   danger: { accent: '#f87171', btnBg: 'linear-gradient(135deg, #f87171, #ef4444)', btnColor: '#fff', icon: '⚠️' },
   warning: { accent: '#fbbf24', btnBg: 'linear-gradient(135deg, #f59e0b, #d97706)', btnColor: '#fff', icon: '⚡' },
   info: { accent: '#22d3ee', btnBg: 'linear-gradient(135deg, #22d3ee, #06b6d4)', btnColor: '#0f172a', icon: 'ℹ️' },
+  success: { accent: '#34d399', btnBg: 'linear-gradient(135deg, #34d399, #10b981)', btnColor: '#fff', icon: '✅' },
 };
 
 const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({

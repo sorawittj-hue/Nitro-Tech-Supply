@@ -23,8 +23,8 @@
   --accent-violet-dim: #7c3aed;
 
   --text-primary: #ffffff;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-secondary: #f1f5f9;
+  --text-muted: #cbd5e1;
   --text-accent: var(--accent-cyan);
 
   --border-subtle: rgba(148, 163, 184, 0.08);
@@ -258,17 +258,17 @@ body {
 
 .header-brand-text h1 {
   font-family: var(--font-pixel);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--accent-cyan);
   text-shadow: 0 0 12px rgba(34, 211, 238, 0.4);
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
 }
 
 .header-brand-text p {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  color: var(--text-muted);
-  margin-top: 1px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
   letter-spacing: 0.5px;
 }
 
@@ -860,10 +860,11 @@ body {
 }
 
 .side-panel-header h2 {
-  font-family: var(--font-pixel);
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
   color: var(--accent-cyan);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .side-panel-close {
@@ -921,10 +922,11 @@ body {
 }
 
 .panel-card-title {
-  font-family: var(--font-pixel);
-  font-size: 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
   color: var(--accent-cyan);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 /* ========================================
@@ -1705,11 +1707,12 @@ body {
 }
 
 .settings-section h3 {
-  font-family: var(--font-pixel);
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
   color: var(--accent-cyan);
   margin-bottom: 12px;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 /* ========================================

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 interface KeyboardShortcutsProps {
   togglePanel: (panel: string) => void;
   setActivePanel: (panel: string) => void;
-  addLog: (type: string, message: string) => void;
+  addLog: (type: 'INFO' | 'TRADE' | 'CRITICAL' | 'WARN', message: string) => void;
   clearLogs: () => void;
   focusSearch: () => void;
 }
