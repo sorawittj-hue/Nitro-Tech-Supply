@@ -52,7 +52,7 @@ npm install
 ```bash
 cp .env.example .env
 ```
-*(ในเครื่องพัฒนาโลคอล ค่าเริ่มต้นจะเป็น `VITE_API_BASE_URL=http://localhost:3001`)*
+*(ในเครื่องพัฒนาโลคอล ค่าเริ่มต้นจะเป็น `VITE_API_BASE_URL=http://localhost:3030`)*
 
 ### 3. เริ่มรันระบบ
 ในการรันพัฒนา ให้รันทั้ง Frontend (Vite) และ Backend (json-server) พร้อมกันผ่าน Concurrently:
@@ -61,7 +61,7 @@ npm run dev:all
 ```
 ระบบจะเปิดบริการดังนี้:
 *   **Frontend (Vite)**: [http://localhost:5173](http://localhost:5173)
-*   **Backend (REST API)**: [http://localhost:3001](http://localhost:3001)
+*   **Backend (REST API)**: [http://localhost:3030](http://localhost:3030)
 
 ---
 

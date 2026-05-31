@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
       host: true,
     },
     define: {
-      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:3001'),
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:3030'),
     },
   }
 })

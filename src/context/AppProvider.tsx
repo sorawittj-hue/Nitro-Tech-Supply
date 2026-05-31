@@ -73,7 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ];
   });
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3030';
 
   // Base logging and notification functions (must be declared first)
   const addLog = useCallback((type: ConsoleLog['type'], message: string) => {
