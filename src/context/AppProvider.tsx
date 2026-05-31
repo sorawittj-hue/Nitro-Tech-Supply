@@ -62,6 +62,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [finance, setFinance] = useState<FinanceData | null>(null);
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<string>('—');
+  const [isOffline, setIsOffline] = useState<boolean>(false);
 
   // Logs state, initialized cleanly
   const [logs, setLogs] = useState<ConsoleLog[]>(() => {
@@ -106,34 +107,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetch(`${apiBase}/finance`),
       ]);
 
-      if (invRes.ok && invRes.headers.get('content-type')?.includes('application/json')) {
-        setInventory(await invRes.json());
-      } else {
-        throw new Error('Invalid inventory data format');
+      if (!invRes.ok) {
+        throw new Error(`Inventory API returned status ${invRes.status} (${invRes.statusText})`);
       }
+      const invContentType = invRes.headers.get('content-type') || '';
+      if (!invContentType.includes('application/json')) {
+        throw new Error(`Inventory API returned non-JSON content-type: "${invContentType}"`);
+      }
+      const invData = await invRes.json();
 
-      if (ordRes.ok && ordRes.headers.get('content-type')?.includes('application/json')) {
-        setOrders(await ordRes.json());
-      } else {
-        throw new Error('Invalid orders data format');
+      if (!ordRes.ok) {
+        throw new Error(`Orders API returned status ${ordRes.status} (${ordRes.statusText})`);
       }
+      const ordContentType = ordRes.headers.get('content-type') || '';
+      if (!ordContentType.includes('application/json')) {
+        throw new Error(`Orders API returned non-JSON content-type: "${ordContentType}"`);
+      }
+      const ordData = await ordRes.json();
 
-      if (affRes.ok && affRes.headers.get('content-type')?.includes('application/json')) {
-        setAffiliate(await affRes.json());
-      } else {
-        throw new Error('Invalid affiliate data format');
+      if (!affRes.ok) {
+        throw new Error(`Affiliate API returned status ${affRes.status} (${affRes.statusText})`);
       }
+      const affContentType = affRes.headers.get('content-type') || '';
+      if (!affContentType.includes('application/json')) {
+        throw new Error(`Affiliate API returned non-JSON content-type: "${affContentType}"`);
+      }
+      const affData = await affRes.json();
 
-      if (finRes.ok && finRes.headers.get('content-type')?.includes('application/json')) {
-        setFinance(await finRes.json());
-      } else {
-        throw new Error('Invalid finance data format');
+      if (!finRes.ok) {
+        throw new Error(`Finance API returned status ${finRes.status} (${finRes.statusText})`);
       }
+      const finContentType = finRes.headers.get('content-type') || '';
+      if (!finContentType.includes('application/json')) {
+        throw new Error(`Finance API returned non-JSON content-type: "${finContentType}"`);
+      }
+      const finData = await finRes.json();
+
+      setInventory(invData);
+      setOrders(ordData);
+      setAffiliate(affData);
+      setFinance(finData);
+      setIsOffline(false);
       
       const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
       setLastUpdated(ts);
     } catch (err) {
       console.warn('Failed to fetch data from json-server, falling back to local storage database:', err);
+      setIsOffline(true);
+      
       // Fallback to initial datasets if server is unreachable
       setInventory(fallbackInventory);
       setOrders(fallbackOrders);
@@ -162,6 +183,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Inventory actions with offline fallback handling
   const adjustStock = useCallback(async (item: InventoryItem, delta: number) => {
     const newStock = Math.max(0, item.stock + delta);
+    if (isOffline) {
+      const offlineItem = { ...item, stock: newStock };
+      setInventory(prev => prev.map(i => i.id === item.id ? offlineItem : i));
+      addLog('WARN', `📦 ปรับสต็อก (Offline) ${item.name}: ${item.stock} → ${newStock}`);
+      addAuditLog('Stock Adjust (Offline)', `${item.name} ${item.stock} → ${newStock} locally`);
+      addToast('warning', `${item.name}: ${item.stock} → ${newStock} (โหมดออฟไลน์)`);
+      return;
+    }
     try {
       const res = await fetch(`${apiBase}/inventory/${item.id}`, {
         method: 'PUT',
@@ -176,15 +205,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addToast('info', `${item.name}: ${item.stock} → ${newStock}`);
     } catch (err) {
       console.warn('Backend offline, adjusting stock locally:', err);
+      setIsOffline(true);
       const offlineItem = { ...item, stock: newStock };
       setInventory(prev => prev.map(i => i.id === item.id ? offlineItem : i));
       addLog('WARN', `📦 ปรับสต็อก (Offline) ${item.name}: ${item.stock} → ${newStock}`);
       addAuditLog('Stock Adjust (Offline)', `${item.name} ${item.stock} → ${newStock} locally`);
       addToast('warning', `${item.name}: ${item.stock} → ${newStock} (โหมดออฟไลน์)`);
     }
-  }, [apiBase, addLog, addAuditLog, addToast]);
+  }, [apiBase, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
 
   const saveInventoryItem = useCallback(async (item: Omit<InventoryItem, 'id'> & { id?: string }) => {
+    if (isOffline) {
+      if (item.id) {
+        const offlineItem = item as InventoryItem;
+        setInventory(prev => prev.map(i => i.id === item.id ? offlineItem : i));
+        addLog('WARN', `📝 อัปเดตสต็อก (Offline) ${item.name} → ${item.stock} units`);
+        addAuditLog('Inventory Update (Offline)', `${item.name} stock ${item.stock} locally`);
+        addToast('warning', `อัปเดต ${item.name} สำเร็จ (โหมดออฟไลน์)`);
+      } else {
+        const offlineItem = { ...item, id: Date.now().toString() } as InventoryItem;
+        setInventory(prev => [...prev, offlineItem]);
+        addLog('WARN', `🆕 เพิ่มสินค้าใหม่ (Offline): ${offlineItem.name}`);
+        addAuditLog('Inventory Create (Offline)', `New item ${offlineItem.name} locally`);
+        addToast('warning', `เพิ่มสินค้า ${offlineItem.name} สำเร็จ (โหมดออฟไลน์)`);
+      }
+      return;
+    }
     try {
       let saved: InventoryItem;
       if (item.id) {
@@ -215,6 +261,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.warn('Backend offline, saving locally:', err);
+      setIsOffline(true);
       if (item.id) {
         const offlineItem = item as InventoryItem;
         setInventory(prev => prev.map(i => i.id === item.id ? offlineItem : i));
@@ -229,9 +276,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addToast('warning', `เพิ่มสินค้า ${offlineItem.name} สำเร็จ (โหมดออฟไลน์)`);
       }
     }
-  }, [apiBase, addLog, addAuditLog, addToast]);
+  }, [apiBase, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
 
   const deleteInventoryItem = useCallback(async (id: string) => {
+    if (isOffline) {
+      setInventory(prev => prev.filter(i => i.id !== id));
+      addLog('WARN', `🗑️ ลบสินค้าออกจากคลัง (Offline) ${id}`);
+      addAuditLog('Inventory Delete (Offline)', `Deleted ${id} locally`);
+      addToast('warning', 'ลบสินค้าสำเร็จ (โหมดออฟไลน์)');
+      return;
+    }
     try {
       const res = await fetch(`${apiBase}/inventory/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete inventory item');
@@ -241,12 +295,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addToast('success', 'ลบสินค้าสำเร็จ');
     } catch (err) {
       console.warn('Backend offline, deleting locally:', err);
+      setIsOffline(true);
       setInventory(prev => prev.filter(i => i.id !== id));
       addLog('WARN', `🗑️ ลบสินค้าออกจากคลัง (Offline) ${id}`);
       addAuditLog('Inventory Delete (Offline)', `Deleted ${id} locally`);
       addToast('warning', 'ลบสินค้าสำเร็จ (โหมดออฟไลน์)');
     }
-  }, [apiBase, addLog, addAuditLog, addToast]);
+  }, [apiBase, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
 
   useEffect(() => {
     localStorage.setItem('geminiApiKey', geminiApiKey);
@@ -362,6 +417,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     finance,
     loadingData,
     lastUpdated,
+    isOffline,
     setAgents,
     setSelectedAgent,
     setLogs,
@@ -373,6 +429,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setGeminiApiKey,
     setGeminiModel,
     setRetryCount,
+    setIsOffline,
     addLog,
     handleUpdateAgent,
     handleWakeAgent,

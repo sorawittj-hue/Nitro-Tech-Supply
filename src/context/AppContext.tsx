@@ -63,6 +63,7 @@ export interface AppState {
   finance: FinanceData | null;
   loadingData: boolean;
   lastUpdated: string;
+  isOffline: boolean;
 }
 
 export interface AppContextValue extends AppState {
@@ -77,6 +78,7 @@ export interface AppContextValue extends AppState {
   setGeminiApiKey: React.Dispatch<React.SetStateAction<string>>;
   setGeminiModel: React.Dispatch<React.SetStateAction<string>>;
   setRetryCount: React.Dispatch<React.SetStateAction<number>>;
+  setIsOffline: React.Dispatch<React.SetStateAction<boolean>>;
   addLog: (type: ConsoleLog['type'], message: string) => void;
   handleUpdateAgent: (updatedAgent: Agent) => void;
   handleWakeAgent: (agent: Agent) => void;

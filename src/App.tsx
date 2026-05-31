@@ -38,6 +38,7 @@ export default function App() {
     handleWakeAgent,
     togglePanel,
     addLog,
+    isOffline,
   } = app;
 
   const nappingCount = agents.filter(a => a.status === 'Napping').length;
@@ -84,8 +85,8 @@ export default function App() {
               </div>
             ) : (
               <div className="header-status">
-                <div className="header-status-dot" />
-                <span>ทีม AI ทำงานปกติ — Swarm Health 100%</span>
+                <div className={`header-status-dot ${isOffline ? 'alert' : ''}`} />
+                <span>{isOffline ? 'โหมดจำลอง (Offline) — ข้อมูลบันทึกในเครื่องชั่วคราว' : 'ทีม AI ทำงานปกติ — Swarm Health 100%'}</span>
               </div>
             )}
           </div>
