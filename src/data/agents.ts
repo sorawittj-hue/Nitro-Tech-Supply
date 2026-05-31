@@ -1,3 +1,10 @@
+﻿export interface AgentSearchResult {
+  id: string;
+  name: string;
+  title: string;
+  avatar: string;
+}
+
 export interface Agent {
   id: string;
   name: string;

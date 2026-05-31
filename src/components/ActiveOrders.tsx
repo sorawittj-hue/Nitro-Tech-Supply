@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useApp } from '../context/AppContext';
+import type { Agent, ConsoleLog } from '../data/agents';
 
 interface OrderItem {
   id: string;
@@ -10,21 +12,15 @@ interface OrderItem {
   date: string;
 }
 
-export const ActiveOrders: React.FC = () => {
+export const ActiveOrders: React.FC<{ agents: Agent[] }> = ({ agents }) => {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('http://localhost:3001/orders')
       .then(r => r.json())
-      .then(data => {
-        setOrders(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Backend not running", err);
-        setLoading(false);
-      });
+      .then(data => { setOrders(data); setLoading(false); })
+      .catch(err => { console.error("Backend not running", err); setLoading(false); });
   }, []);
 
   if (loading) {
@@ -33,9 +29,7 @@ export const ActiveOrders: React.FC = () => {
         <div className="panel-card-header">
           <span className="panel-card-title">🚚 ACTIVE ORDERS</span>
         </div>
-        <div style={{padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '14px'}}>
-          Syncing with Backend...
-        </div>
+        <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '14px' }}>Syncing with Backend...</div>
       </div>
     );
   }
@@ -46,17 +40,13 @@ export const ActiveOrders: React.FC = () => {
         <span className="panel-card-title">🚚 ACTIVE ORDERS</span>
         <span className="badge badge-info">{orders.length} ORDERS</span>
       </div>
-
       <div>
         {orders.map((order, i) => (
           <div key={order.id || i} className="restock-item">
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--accent-cyan)', fontWeight: 600, fontSize: '13px' }}>ORD-{order.id}</span>
-                <span className={`badge ${
-                  order.status.toLowerCase() === 'delivered' ? 'badge-success' : 
-                  order.status.toLowerCase() === 'shipping' ? 'badge-warning' : 'badge-info'
-                }`}>
+                <span className={`badge ${order.status === 'Delivered' ? 'badge-success' : order.status === 'Shipped' ? 'badge-warning' : 'badge-info'}`}>
                   {order.status.toUpperCase()}
                 </span>
               </div>
@@ -69,9 +59,7 @@ export const ActiveOrders: React.FC = () => {
           </div>
         ))}
         {orders.length === 0 && (
-          <div style={{padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px'}}>
-            No active orders. Check Backend.
-          </div>
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>No active orders. Check Backend.</div>
         )}
       </div>
     </div>

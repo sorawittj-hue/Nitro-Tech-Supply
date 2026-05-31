@@ -1815,9 +1815,88 @@ body {
     width: 95vw;
     max-height: 90vh;
   }
-  
+
   .modal-info-grid {
     grid-template-columns: 1fr;
   }
 }
+
+/* ========================================
+   TOAST NOTIFICATIONS
+   ======================================== */
+@keyframes slideInRight {
+  from { transform: translateX(110%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* ========================================
+   LOADING SKELETONS
+   ======================================== */
+.skeleton-block {
+  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-elevated) 50%, var(--bg-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: var(--radius-md);
+  padding: 24px;
+  min-height: 60px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ========================================
+   FORM VALIDATION
+   ======================================== */
+.form-error {
+  color: var(--accent-rose);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--accent-rose);
+  background: rgba(251, 113, 133, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+/* ========================================
+   BUTTON VARIANTS
+   ======================================== */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+/* ========================================
+   SEARCH / INPUT UTILS
+   ======================================== */
+.glass-input {
+  backdrop-filter: blur(12px);
+}
+
+/* ========================================
+   CHART CONTAINERS
+   ======================================== */
+.chart-area {
+  min-height: 300px;
+}
+
+/* ========================================
+   MISC LAYOUT
+   ======================================== */
 
