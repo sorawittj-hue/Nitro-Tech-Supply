@@ -14,6 +14,8 @@ const HERMES_API_KEY = process.env.HERMES_API_KEY || process.env.VITE_HERMES_API
 const HERMES_SESSION_KEY = process.env.HERMES_SESSION_KEY || process.env.VITE_HERMES_SESSION_KEY || 'nitro-tech-jay';
 const MIMO_API_URL = trimSlash(process.env.MIMO_API_BASE_URL || process.env.VITE_MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1');
 const MIMO_API_KEY = process.env.MIMO_API_KEY || process.env.VITE_MIMO_API_KEY || '';
+const DATA_API_URL = trimSlash(process.env.DATA_API_URL || process.env.VITE_API_BASE_URL || 'http://127.0.0.1:3030');
+const DATA_ENDPOINTS = new Set(['/inventory', '/orders', '/affiliate', '/finance']);
 const configuredOrigins = (process.env.NITRO_ALLOWED_ORIGINS || '')
   .split(',')
   .map(origin => origin.trim())
@@ -79,6 +81,17 @@ const server = http.createServer(async (request, response) => {
         },
         body: await readBody(request),
       }, 'MiMo is not configured.');
+      return;
+    }
+
+    if (isDataEndpoint(url.pathname)) {
+      await proxyJson(response, `${DATA_API_URL}${url.pathname}${url.search}`, {
+        method: request.method || 'GET',
+        headers: {
+          'Content-Type': request.headers['content-type'] || 'application/json',
+        },
+        body: hasRequestBody(request.method) ? await readBody(request) : undefined,
+      }, 'Nitro data API is not configured.');
       return;
     }
 
@@ -154,6 +167,14 @@ function loadEnvFile(fileUrl) {
 
 function trimSlash(value) {
   return value.replace(/\/$/, '');
+}
+
+function isDataEndpoint(pathname) {
+  return DATA_ENDPOINTS.has(pathname) || [...DATA_ENDPOINTS].some(endpoint => pathname.startsWith(`${endpoint}/`));
+}
+
+function hasRequestBody(method) {
+  return method === 'POST' || method === 'PUT' || method === 'PATCH';
 }
 
 function serveStaticApp(response, pathname) {
