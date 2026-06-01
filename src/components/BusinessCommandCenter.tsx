@@ -16,6 +16,17 @@ interface ExecutiveAction {
   detail: string;
 }
 
+type CommandPanelTarget = 'inventory' | 'chat' | 'income' | 'analytics';
+
+interface ReadinessItem {
+  id: string;
+  label: string;
+  status: 'ready' | 'waiting' | 'offline';
+  detail: string;
+  actionLabel: string;
+  target: CommandPanelTarget | null;
+}
+
 const currencyFormatter = new Intl.NumberFormat('th-TH', {
   style: 'currency',
   currency: 'THB',
@@ -23,7 +34,18 @@ const currencyFormatter = new Intl.NumberFormat('th-TH', {
 });
 
 export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: BusinessCommandCenterProps) {
-  const { inventory, orders, finance, affiliate, loadingData, isOffline, lastUpdated, refreshAllData } = useApp();
+  const {
+    inventory,
+    orders,
+    finance,
+    affiliate,
+    loadingData,
+    isOffline,
+    lastUpdated,
+    refreshAllData,
+    chatProvider,
+    hermesConnected,
+  } = useApp();
 
   const metrics = useMemo(() => {
     const cashOnHand = finance?.cashOnHand ?? 0;
@@ -54,6 +76,73 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     };
   }, [agents, finance, inventory, orders]);
 
+  const hasBusinessData = inventory.length > 0
+    || orders.length > 0
+    || (finance?.cashOnHand ?? 0) > 0
+    || (affiliate?.conversions ?? 0) > 0
+    || (affiliate?.revenueTHB ?? 0) > 0;
+
+  const readinessItems = useMemo<ReadinessItem[]>(() => {
+    const financeReady = finance !== null && (
+      finance.cashOnHand > 0 || inventory.length > 0 || orders.length > 0
+    );
+    const affiliateReady = affiliate !== null && (
+      affiliate.totalClicks > 0 || affiliate.conversions > 0 || affiliate.revenueTHB > 0
+    );
+    const aiReady = chatProvider === 'hermes' ? hermesConnected : chatProvider !== 'offline';
+
+    return [
+      {
+        id: 'backend',
+        label: 'Backend',
+        status: isOffline ? 'offline' : 'ready',
+        detail: isOffline ? 'Data API is unreachable.' : 'Inventory, orders, finance API reachable.',
+        actionLabel: 'Refresh',
+        target: null,
+      },
+      {
+        id: 'inventory',
+        label: 'Inventory',
+        status: inventory.length > 0 ? 'ready' : 'waiting',
+        detail: inventory.length > 0 ? `${inventory.length} SKU tracked.` : 'Add real SKUs, stock, threshold, and unit cost.',
+        actionLabel: 'Open',
+        target: 'inventory',
+      },
+      {
+        id: 'orders',
+        label: 'Orders',
+        status: orders.length > 0 ? 'ready' : 'waiting',
+        detail: orders.length > 0 ? `${orders.length} orders tracked.` : 'Connect or enter wholesale and retail orders.',
+        actionLabel: 'Open',
+        target: 'inventory',
+      },
+      {
+        id: 'finance',
+        label: 'Finance',
+        status: financeReady ? 'ready' : 'waiting',
+        detail: financeReady ? `Cash baseline ${currencyFormatter.format(finance?.cashOnHand ?? 0)}.` : 'Set cash-on-hand and receivable baseline.',
+        actionLabel: 'Open',
+        target: 'income',
+      },
+      {
+        id: 'growth',
+        label: 'Growth',
+        status: affiliateReady ? 'ready' : 'waiting',
+        detail: affiliateReady ? `${affiliate?.conversions ?? 0} conversions tracked.` : 'Connect affiliate, marketplace, or campaign data.',
+        actionLabel: 'Open',
+        target: 'analytics',
+      },
+      {
+        id: 'ai',
+        label: 'AI Brain',
+        status: aiReady ? 'ready' : 'waiting',
+        detail: aiReady ? `${chatProvider.toUpperCase()} is selected for team chat.` : 'Configure Hermes or MiMo before delegating work.',
+        actionLabel: 'Chat',
+        target: 'chat',
+      },
+    ];
+  }, [affiliate, chatProvider, finance, hermesConnected, inventory.length, isOffline, orders.length]);
+
   const departmentMap = useMemo(() => {
     const grouped = new Map<string, Agent[]>();
     agents.forEach(agent => {
@@ -65,6 +154,34 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
 
   const executiveActions = useMemo<ExecutiveAction[]>(() => {
     const actions: ExecutiveAction[] = [];
+
+    if (!hasBusinessData) {
+      actions.push(
+        {
+          id: 'setup-inventory',
+          title: 'Create the first real SKU list',
+          owner: 'Atlas + Mira',
+          priority: 'high',
+          detail: 'Open Inventory and add product name, stock, threshold, and unit price.',
+        },
+        {
+          id: 'setup-finance',
+          title: 'Set the cash and receivable baseline',
+          owner: 'Vega',
+          priority: 'high',
+          detail: 'Add cash-on-hand, pending receivables, and weekly reserve target.',
+        },
+        {
+          id: 'setup-sales-playbook',
+          title: 'Ask AI team for the first sales playbook',
+          owner: 'Max + Nova',
+          priority: 'medium',
+          detail: 'Use Team Chat to generate B2B wholesale offer, retail bundle, and follow-up script.',
+        }
+      );
+
+      return actions;
+    }
 
     metrics.criticalStockItems.slice(0, 2).forEach(item => {
       actions.push({
@@ -107,7 +224,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     }
 
     return actions.slice(0, 4);
-  }, [metrics]);
+  }, [hasBusinessData, metrics]);
 
   return (
     <div className="command-center">
@@ -132,6 +249,29 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
         </span>
         <span>Updated: {lastUpdated}</span>
         {loadingData && <span>Syncing...</span>}
+      </div>
+
+      <div className="command-readiness-grid">
+        {readinessItems.map(item => (
+          <div key={item.id} className={`readiness-card ${item.status}`}>
+            <div>
+              <div className="readiness-label">{item.label}</div>
+              <div className="readiness-detail">{item.detail}</div>
+            </div>
+            <div className="readiness-action">
+              <span className={`badge ${item.status === 'ready' ? 'badge-success' : item.status === 'offline' ? 'badge-warning' : 'badge-info'}`}>
+                {item.status.toUpperCase()}
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => item.target ? onNavigate(item.target) : refreshAllData()}
+              >
+                {item.actionLabel}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="command-metrics-grid">

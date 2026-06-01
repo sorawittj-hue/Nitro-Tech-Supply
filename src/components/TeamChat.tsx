@@ -10,6 +10,30 @@ interface TeamChatProps {
   agents: Agent[];
 }
 
+interface QuickCommand {
+  label: string;
+  prompt: string;
+}
+
+const QUICK_COMMANDS: QuickCommand[] = [
+  {
+    label: 'สรุปวันนี้',
+    prompt: 'ช่วยสรุปสถานะบริษัทวันนี้แบบ CEO briefing: เงินสด สต็อก ออเดอร์ งานเสี่ยง และสิ่งที่ผมควรตัดสินใจ 3 ข้อ',
+  },
+  {
+    label: 'สต็อกเสี่ยง',
+    prompt: 'Atlas และ Mira ช่วยเช็ค SKU ที่เสี่ยงขาดสต็อก พร้อมเสนอแผนเติมของและงบที่ควรใช้',
+  },
+  {
+    label: 'เงินสด',
+    prompt: 'Vega ช่วยสรุป cashflow ลูกหนี้ค้างรับ ค่าใช้จ่ายที่ต้องระวัง และเงินที่ควรสำรองสัปดาห์นี้',
+  },
+  {
+    label: 'ดีลขายส่ง',
+    prompt: 'Max และ Nova ช่วยวางแผนดีลขายส่งอุปกรณ์คอมพิวเตอร์ไอทีสำหรับลูกค้า B2B พร้อมราคาและข้อเสนอ',
+  },
+];
+
 export const TeamChat: React.FC<TeamChatProps> = ({ agents }) => {
   const {
     aiApiKey,
@@ -48,6 +72,11 @@ export const TeamChat: React.FC<TeamChatProps> = ({ agents }) => {
   }, [chatProvider, providerConfig]);
 
   const systemPrompt = useMemo(() => buildSystemPrompt(agents), [agents]);
+
+  const handleQuickCommand = (prompt: string) => {
+    if (isTyping) return;
+    setInputText(prompt);
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +150,21 @@ export const TeamChat: React.FC<TeamChatProps> = ({ agents }) => {
         <span className={`badge ${activeProvider.isConnected() ? 'badge-success' : 'badge-warning'}`}>
           {activeProvider.isConnected() ? 'LIVE' : 'CONFIG'}
         </span>
+      </div>
+
+      <div className="chat-quick-actions" aria-label="CEO quick commands">
+        {QUICK_COMMANDS.map(command => (
+          <button
+            key={command.label}
+            type="button"
+            className="chat-quick-action"
+            onClick={() => handleQuickCommand(command.prompt)}
+            disabled={isTyping}
+            title={command.prompt}
+          >
+            {command.label}
+          </button>
+        ))}
       </div>
 
       <div className="chat-messages" style={{ flex: 1, overflowY: 'auto' }}>

@@ -1078,6 +1078,42 @@ body {
   margin-bottom: 12px;
 }
 
+.chat-quick-actions {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 0 10px;
+  margin: -2px 0 10px;
+  scrollbar-width: thin;
+}
+
+.chat-quick-action {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+}
+
+.chat-quick-action:hover,
+.chat-quick-action:focus-visible {
+  color: var(--text-primary);
+  border-color: var(--border-glow-cyan);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.12);
+}
+
+.chat-quick-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .chat-bubble {
   display: flex;
   gap: 10px;
@@ -2351,6 +2387,64 @@ body {
   gap: 12px;
 }
 
+.command-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.readiness-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 82px;
+  padding: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.readiness-card.ready {
+  border-color: rgba(52, 211, 153, 0.22);
+}
+
+.readiness-card.waiting {
+  border-color: rgba(34, 211, 238, 0.2);
+}
+
+.readiness-card.offline {
+  border-color: rgba(251, 191, 36, 0.28);
+}
+
+.readiness-label {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.readiness-detail {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.readiness-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.readiness-action .btn {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
 .command-metric-card,
 .command-section {
   background: var(--bg-panel);
@@ -2485,6 +2579,7 @@ body {
 }
 
 @media (max-width: 1100px) {
+  .command-readiness-grid,
   .command-metrics-grid,
   .command-grid,
   .command-grid.three {
@@ -2506,6 +2601,7 @@ body {
   }
 
   .command-metrics-grid,
+  .command-readiness-grid,
   .command-grid,
   .command-grid.three,
   .department-grid {
@@ -2518,6 +2614,10 @@ body {
 
   .command-action-meta {
     align-items: flex-start;
+  }
+
+  .readiness-card {
+    min-height: 0;
   }
 }
 
