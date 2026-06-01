@@ -12,11 +12,16 @@ const HERMES_API_KEY = process.env.HERMES_API_KEY || process.env.VITE_HERMES_API
 const HERMES_SESSION_KEY = process.env.HERMES_SESSION_KEY || process.env.VITE_HERMES_SESSION_KEY || 'nitro-tech-jay';
 const MIMO_API_URL = trimSlash(process.env.MIMO_API_BASE_URL || process.env.VITE_MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1');
 const MIMO_API_KEY = process.env.MIMO_API_KEY || process.env.VITE_MIMO_API_KEY || '';
+const configuredOrigins = (process.env.NITRO_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 const ALLOWED_ORIGINS = new Set([
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
+  ...configuredOrigins,
 ]);
 
 const server = http.createServer(async (request, response) => {
