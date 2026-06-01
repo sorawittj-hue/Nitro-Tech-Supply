@@ -1,7 +1,11 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import type { Agent } from '../data/agents';
 import { initialAgents } from '../data/agents';
 import type { ConsoleLog } from '../components/SystemConsole';
+import { testHermesConnection as testHermesProviderConnection } from '../providers/providerFactory';
+import type { ChatProviderConfig, ChatProviderId } from '../providers/types';
+import { useAgentEvents } from '../hooks/useAgentEvents';
+import { parseAffiliateData, parseFinanceData, parseInventoryData, parseOrderData } from '../lib/businessDataValidators';
 import { 
   AppContext, 
   type InventoryItem, 
@@ -13,44 +17,22 @@ import {
   type AppContextValue 
 } from './AppContext';
 
-const fallbackInventory: InventoryItem[] = [
-  { id: '1', name: 'ASUS ROG RTX 4070 Ti', stock: 45, threshold: 20, price: 28900 },
-  { id: '2', name: 'AMD Ryzen 7 7800X3D', stock: 12, threshold: 15, price: 14500 },
-  { id: '3', name: 'Corsair Vengeance DDR5 32GB', stock: 8, threshold: 30, price: 4200 },
-  { id: '4', name: 'Samsung 990 PRO 2TB', stock: 65, threshold: 20, price: 6500 }
-];
-
-const fallbackOrders: OrderItem[] = [
-  { id: '1', customer: 'Advice IT (สาขาปิ่นเกล้า)', item: 'ASUS ROG RTX 4070 Ti', quantity: 10, status: 'Pending', date: '2026-05-31', value: 289000 },
-  { id: '2', customer: 'JIB Computer Group', item: 'AMD Ryzen 7 7800X3D', quantity: 5, status: 'Shipped', date: '2026-05-30', value: 72500 },
-  { id: '3', customer: 'Speed Computer', item: 'Samsung 990 PRO 2TB', quantity: 8, status: 'Delivered', date: '2026-05-28', value: 52000 },
-  { id: '4', customer: 'iHaveCPU', item: 'Corsair Vengeance DDR5 32GB', quantity: 15, status: 'Delivered', date: '2026-05-26', value: 63000 },
-  { id: '5', customer: 'Advice IT (สาขาพระราม 2)', item: 'ASUS ROG RTX 4070 Ti', quantity: 3, status: 'Delivered', date: '2026-05-24', value: 86700 },
-  { id: '6', customer: 'JIB (สาขาเซ็นทรัลลาดพร้าว)', item: 'AMD Ryzen 7 7800X3D', quantity: 4, status: 'Delivered', date: '2026-05-22', value: 58000 }
-];
-
-const fallbackAffiliate: AffiliateData = {
-  totalClicks: 12450,
-  conversions: 892,
-  revenueTHB: 154200.50
-};
-
-const fallbackFinance: FinanceData = {
-  cashOnHand: 680000
-};
-
 let toastCounter = 0;
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [agents, setAgents] = useState<Agent[]>(initialAgents);
+  const [agents, setAgents] = useState<Agent[]>(() => loadAgentLayout(initialAgents));
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [projectProgress, setProjectProgress] = useState<number>(72);
+  const [projectProgress, setProjectProgress] = useState<number>(0);
   const [nappingAgentAlert, setNappingAgentAlert] = useState<Agent | null>(null);
   const [activePanel, setActivePanel] = useState<string>('none');
   const [sharedSkillText, setSharedSkillText] = useState<string>(initialAgents[0]?.sharedSkill || '');
   const [currentTime, setCurrentTime] = useState<string>('');
-  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => localStorage.getItem('geminiApiKey') || '');
-  const [geminiModel, setGeminiModel] = useState<string>(() => localStorage.getItem('geminiModel') || 'gemini-3-flash-preview');
+  const [aiApiKey, setAiApiKey] = useState<string>(() => import.meta.env.VITE_MIMO_API_KEY || '');
+  const [aiModel, setAiModel] = useState<string>(() => localStorage.getItem('mimoModel') || 'mimo-v2.5-pro');
+  const [hermesConfig, setHermesConfig] = useState<ChatProviderConfig>(() => loadHermesConfig());
+  const [chatProvider, setChatProvider] = useState<ChatProviderId>(() => loadChatProvider(import.meta.env.VITE_NITRO_PROXY_URL, import.meta.env.VITE_HERMES_API_URL, import.meta.env.VITE_HERMES_API_KEY, import.meta.env.VITE_MIMO_API_KEY));
+  const [hermesConnected, setHermesConnected] = useState<boolean>(false);
+  const [debugMode, setDebugMode] = useState<boolean>(() => localStorage.getItem('nitro-tech:debug-mode') === 'true');
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [retryCount, setRetryCount] = useState<number>(0);
@@ -68,9 +50,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<ConsoleLog[]>(() => {
     const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
     return [
-      { timestamp: ts, type: 'INFO', message: 'ระบบ Nitro Tech Supply เริ่มต้นการทำงาน...' },
-      { timestamp: ts, type: 'INFO', message: 'ตรวจสอบคลังสินค้า... สถานะ: พร้อมจัดส่ง 100%' },
-      { timestamp: ts, type: 'INFO', message: 'โหลดคู่มือบอทลูกน้องสำเร็จ — ทุกคนพร้อมทำงาน' },
+      { timestamp: ts, type: 'INFO', message: 'Nitro Tech Supply OS started.' },
+      { timestamp: ts, type: 'INFO', message: 'Waiting for real business data from backend.' },
+      { timestamp: ts, type: 'INFO', message: 'MiMo AI integration is configured from environment/settings.' },
     ];
   });
 
@@ -96,6 +78,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  const eventOptions = useMemo(() => ({
+    setAgents,
+    setInventory,
+    setOrders,
+    setFinance,
+    setAffiliate,
+    addLog,
+  }), [addLog]);
+
+  const { isConnected: transportConnected, lastEventAt: lastAgentEventAt } = useAgentEvents(eventOptions);
+
   // Fetch all endpoints with defensive checks to avoid SyntaxError for HTML responses
   const refreshAllData = useCallback(async () => {
     setLoadingData(true);
@@ -114,7 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!invContentType.includes('application/json')) {
         throw new Error(`Inventory API returned non-JSON content-type: "${invContentType}"`);
       }
-      const invData = await invRes.json();
+      const invData = parseInventoryData(await invRes.json());
 
       if (!ordRes.ok) {
         throw new Error(`Orders API returned status ${ordRes.status} (${ordRes.statusText})`);
@@ -123,7 +116,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!ordContentType.includes('application/json')) {
         throw new Error(`Orders API returned non-JSON content-type: "${ordContentType}"`);
       }
-      const ordData = await ordRes.json();
+      const ordData = parseOrderData(await ordRes.json());
 
       if (!affRes.ok) {
         throw new Error(`Affiliate API returned status ${affRes.status} (${affRes.statusText})`);
@@ -132,7 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!affContentType.includes('application/json')) {
         throw new Error(`Affiliate API returned non-JSON content-type: "${affContentType}"`);
       }
-      const affData = await affRes.json();
+      const affData = parseAffiliateData(await affRes.json());
 
       if (!finRes.ok) {
         throw new Error(`Finance API returned status ${finRes.status} (${finRes.statusText})`);
@@ -141,7 +134,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!finContentType.includes('application/json')) {
         throw new Error(`Finance API returned non-JSON content-type: "${finContentType}"`);
       }
-      const finData = await finRes.json();
+      const finData = parseFinanceData(await finRes.json());
 
       setInventory(invData);
       setOrders(ordData);
@@ -152,14 +145,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
       setLastUpdated(ts);
     } catch (err) {
-      console.warn('Failed to fetch data from json-server, falling back to local storage database:', err);
+      console.warn('Failed to fetch data from backend:', err);
       setIsOffline(true);
-      
-      // Fallback to initial datasets if server is unreachable
-      setInventory(fallbackInventory);
-      setOrders(fallbackOrders);
-      setAffiliate(fallbackAffiliate);
-      setFinance(fallbackFinance);
+      setInventory([]);
+      setOrders([]);
+      setAffiliate(null);
+      setFinance(null);
       
       const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
       setLastUpdated(`${ts} (Offline)`);
@@ -180,7 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, [refreshAllData]);
 
-  // Inventory actions with offline fallback handling
+  // Inventory actions with offline local handling
   const adjustStock = useCallback(async (item: InventoryItem, delta: number) => {
     const newStock = Math.max(0, item.stock + delta);
     if (isOffline) {
@@ -304,9 +295,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [apiBase, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
 
   useEffect(() => {
-    localStorage.setItem('geminiApiKey', geminiApiKey);
-    localStorage.setItem('geminiModel', geminiModel);
-  }, [geminiApiKey, geminiModel]);
+    localStorage.setItem('mimoModel', aiModel);
+  }, [aiModel]);
+
+  useEffect(() => {
+    localStorage.setItem('nitro-tech:hermes-config', JSON.stringify(hermesConfig));
+  }, [hermesConfig]);
+
+  useEffect(() => {
+    localStorage.setItem('nitro-tech:chat-provider', chatProvider);
+  }, [chatProvider]);
+
+  useEffect(() => {
+    localStorage.setItem('nitro-tech:debug-mode', String(debugMode));
+  }, [debugMode]);
+
+  const testHermesConnection = useCallback(async () => {
+    const ok = await testHermesProviderConnection(hermesConfig);
+    setHermesConnected(ok);
+    addToast(ok ? 'success' : 'error', ok ? 'Hermes Connected' : 'Hermes Connection Failed');
+    addLog(ok ? 'INFO' : 'WARN', ok ? 'Hermes API health check passed' : 'Hermes API health check failed');
+    return ok;
+  }, [addLog, addToast, hermesConfig]);
+
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      const ok = await testHermesProviderConnection(hermesConfig);
+      if (!active) return;
+      setHermesConnected(ok);
+      if (ok && chatProvider === 'offline') {
+        setChatProvider('hermes');
+      }
+      if (!ok && chatProvider === 'hermes' && aiApiKey) {
+        setChatProvider('mimo');
+        addToast('warning', 'Hermes offline, switched to MiMo fallback');
+      }
+    };
+    void check();
+    const interval = setInterval(check, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [addToast, aiApiKey, chatProvider, hermesConfig]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -317,57 +349,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const playAlertSound = useCallback(() => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (AudioContextClass) {
-        const ctx = new AudioContextClass();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        osc.frequency.setValueAtTime(220, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.06, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.45);
-      }
-    } catch {
-      // Catch blocked autoplay or hardware audio issues silently
-    }
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const activeAgents = agents.filter(a => a.id !== 'ceo_jay' && (a.status === 'Working' || a.status === 'Thinking'));
-      if (activeAgents.length === 0) return;
-      const target = activeAgents[Math.floor(Math.random() * activeAgents.length)];
-
-      if (Math.random() < target.sleepChance) {
-        setAgents(prev => prev.map(a => {
-          if (a.id === target.id) {
-            const napping = { ...a, status: 'Napping' as const };
-            setNappingAgentAlert(napping);
-            playAlertSound();
-            addLog('CRITICAL', `⚠️ "${a.name}" แอบงีบหลับ! ระบบถูกระงับชั่วคราว`);
-            addToast('warning', `${a.name} แอบหลับ!`);
-            addAuditLog('Agent Sleep', `${a.name} entered Napping state`);
-            return napping;
-          }
-          return a;
-        }));
-      }
-
-      if (Math.random() > 0.85) {
-        setProjectProgress(prev => Math.min(prev + 1, 100));
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [agents, playAlertSound, addLog, addToast, addAuditLog]);
 
   const handleUpdateAgent = useCallback((updatedAgent: Agent) => {
     const previous = agents.find(a => a.id === updatedAgent.id);
@@ -406,8 +387,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     activePanel,
     sharedSkillText,
     currentTime,
-    geminiApiKey,
-    geminiModel,
+    aiApiKey,
+    aiModel,
     auditLog,
     toasts,
     retryCount,
@@ -418,6 +399,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadingData,
     lastUpdated,
     isOffline,
+    chatProvider,
+    hermesConfig,
+    hermesConnected,
+    transportConnected,
+    lastAgentEventAt,
+    debugMode,
     setAgents,
     setSelectedAgent,
     setLogs,
@@ -426,10 +413,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActivePanel,
     setSharedSkillText,
     setCurrentTime,
-    setGeminiApiKey,
-    setGeminiModel,
+    setAiApiKey,
+    setAiModel,
     setRetryCount,
     setIsOffline,
+    setChatProvider,
+    setHermesConfig,
+    setHermesConnected,
+    setDebugMode,
     addLog,
     handleUpdateAgent,
     handleWakeAgent,
@@ -441,7 +432,55 @@ export function AppProvider({ children }: { children: ReactNode }) {
     adjustStock,
     saveInventoryItem,
     deleteInventoryItem,
+    testHermesConnection,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+function loadAgentLayout(defaultAgents: Agent[]): Agent[] {
+  try {
+    const raw = localStorage.getItem('nitro-tech:layout') || localStorage.getItem('nitro-agent-layout');
+    if (!raw) return defaultAgents;
+    const saved = JSON.parse(raw) as Record<string, Agent['position']>;
+    return defaultAgents.map(agent => {
+      const position = saved[agent.id];
+      if (!position?.left || !position?.top) return agent;
+      return { ...agent, position };
+    });
+  } catch (error) {
+    console.warn('Could not load saved agent layout:', error);
+    return defaultAgents;
+  }
+}
+
+function loadHermesConfig(): ChatProviderConfig {
+  const envConfig: ChatProviderConfig = {
+    mimoApiBaseUrl: import.meta.env.VITE_MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1',
+    mimoApiKey: import.meta.env.VITE_MIMO_API_KEY || '',
+    mimoModel: localStorage.getItem('mimoModel') || 'mimo-v2.5-pro',
+    hermesApiUrl: import.meta.env.VITE_HERMES_API_URL || '',
+    hermesApiKey: import.meta.env.VITE_HERMES_API_KEY || '',
+    hermesSessionKey: import.meta.env.VITE_HERMES_SESSION_KEY || 'nitro-tech-jay',
+    nitroProxyUrl: import.meta.env.VITE_NITRO_PROXY_URL || (import.meta.env.DEV ? 'http://localhost:8787' : ''),
+  };
+
+  try {
+    const raw = localStorage.getItem('nitro-tech:hermes-config');
+    if (!raw) return envConfig;
+    const saved = JSON.parse(raw) as Partial<ChatProviderConfig>;
+    return { ...envConfig, ...saved };
+  } catch (error) {
+    console.warn('Could not load Hermes config:', error);
+    return envConfig;
+  }
+}
+
+function loadChatProvider(proxyUrl?: string, hermesUrl?: string, hermesKey?: string, mimoKey?: string): ChatProviderId {
+  const saved = localStorage.getItem('nitro-tech:chat-provider');
+  if (saved === 'hermes' || saved === 'mimo' || saved === 'offline') return saved;
+  if (proxyUrl) return 'hermes';
+  if (hermesUrl && hermesKey) return 'hermes';
+  if (mimoKey) return 'mimo';
+  return 'offline';
 }

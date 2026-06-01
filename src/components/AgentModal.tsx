@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { Agent } from '../data/agents';
 import { PixelCharacter } from './PixelCharacter';
-import confetti from 'canvas-confetti';
+import { AgentTaskManager } from './AgentTaskManager';
 
 interface AgentModalProps {
   agent: Agent;
@@ -10,27 +10,22 @@ interface AgentModalProps {
 }
 
 export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdateAgent }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'individual' | 'shared'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'tasks' | 'individual' | 'shared'>('info');
   const [individualSkill, setIndividualSkill] = useState(agent.individualSkill);
   const [sharedSkill, setSharedSkill] = useState(agent.sharedSkill);
   const [status, setStatus] = useState(agent.status);
   const [isSaved, setIsSaved] = useState(false);
 
-  useEffect(() => {
-    setIndividualSkill(agent.individualSkill);
-    setSharedSkill(agent.sharedSkill);
-    setStatus(agent.status);
-    setIsSaved(false);
-  }, [agent]);
-
   const handleSave = () => {
     onUpdateAgent({ ...agent, individualSkill, sharedSkill, status });
     setIsSaved(true);
-    confetti({
+    void import('canvas-confetti').then(module => module.default({
       particleCount: 40,
       spread: 55,
       origin: { y: 0.7 },
       colors: ['#22d3ee', '#34d399', '#fbbf24']
+    })).catch(error => {
+      console.warn('Save confetti could not be played:', error);
     });
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -39,7 +34,9 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
     setStatus('Working');
     onUpdateAgent({ ...agent, status: 'Working' });
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sawtooth';
@@ -51,7 +48,9 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.25);
-    } catch {}
+    } catch (error) {
+      console.warn('Wake sound could not be played:', error);
+    }
   };
 
   const isNapping = status === 'Napping';
@@ -64,7 +63,7 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
         <div className="modal-header">
           <div className="modal-profile">
             <div className="modal-avatar-frame" style={isNapping ? { borderColor: 'var(--border-glow-rose)' } : {}}>
-              <PixelCharacter spriteId={agent.id} size={44} animated={false} />
+              <PixelCharacter spriteId={agent.spriteId ?? agent.id} size={44} animated={false} />
             </div>
             <div>
               <div className="modal-name">{agent.name}</div>
@@ -87,6 +86,9 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
           <button className={`modal-tab ${activeTab === 'info' ? 'active' : ''}`} onClick={() => setActiveTab('info')}>
             📋 โปรไฟล์
           </button>
+          <button className={`modal-tab ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
+            ✅ Tasks
+          </button>
           <button className={`modal-tab ${activeTab === 'individual' ? 'active' : ''}`} onClick={() => setActiveTab('individual')}>
             📄 Skill.md
           </button>
@@ -100,6 +102,40 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
           {activeTab === 'info' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="info-desc-box">{agent.description}</div>
+
+              <div className="modal-info-grid">
+                <div className="info-field">
+                  <span className="info-field-label">Department</span>
+                  <div className="info-field-value">{agent.department}</div>
+                </div>
+                <div className="info-field">
+                  <span className="info-field-label">Authority</span>
+                  <div className="info-field-value">{agent.authorityLevel}</div>
+                </div>
+              </div>
+
+              <div className="modal-info-grid">
+                <div className="info-field">
+                  <span className="info-field-label">Live Session</span>
+                  <div className="info-field-value">
+                    <span className={`badge ${agent.isLive ? 'badge-success' : 'badge-warning'}`}>
+                      {agent.isLive ? 'LIVE' : 'OFFLINE'}
+                    </span>
+                    <span style={{ marginLeft: '8px' }}>{agent.sessionId ?? 'no-session'}</span>
+                  </div>
+                </div>
+                <div className="info-field">
+                  <span className="info-field-label">Token Usage</span>
+                  <div className="info-field-value">
+                    {(agent.inputTokens ?? 0).toLocaleString()} in / {(agent.outputTokens ?? 0).toLocaleString()} out
+                  </div>
+                </div>
+              </div>
+
+              <div className="info-field">
+                <span className="info-field-label">Mission</span>
+                <div className="info-field-value">{agent.mission}</div>
+              </div>
               
               <div className="modal-info-grid">
                 <div className="info-field">
@@ -135,6 +171,10 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'tasks' && (
+            <AgentTaskManager agent={agent} />
           )}
 
           {activeTab === 'individual' && (

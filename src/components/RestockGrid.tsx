@@ -19,6 +19,7 @@ export const RestockGrid: React.FC<{ agents?: Agent[] }> = () => {
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', stock: 0, threshold: 10, price: 0 });
@@ -27,19 +28,22 @@ export const RestockGrid: React.FC<{ agents?: Agent[] }> = () => {
   const openCreate = () => {
     setForm({ name: '', stock: 0, threshold: 10, price: 0 });
     setEditingItem(null);
+    setIsEditorOpen(true);
     setError('');
   };
 
   const openEdit = (item: InventoryItem) => {
     setForm({ name: item.name, stock: item.stock, threshold: item.threshold, price: item.price });
     setEditingItem(item);
+    setIsEditorOpen(true);
     setError('');
   };
 
   const validate = () => {
     if (!form.name.trim()) return 'กรุณากรอกชื่อสินค้า';
-    if (form.threshold < 1) return 'Threshold ต้องมากกว่า 0';
-    if (form.price < 0) return 'ราคาต้องไม่ติดลบ';
+    if (!Number.isInteger(form.stock) || form.stock < 0) return 'Stock ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป';
+    if (!Number.isInteger(form.threshold) || form.threshold < 1) return 'Threshold ต้องเป็นจำนวนเต็มมากกว่า 0';
+    if (!Number.isFinite(form.price) || form.price < 0) return 'ราคาต้องไม่ติดลบ';
     return '';
   };
 
@@ -52,6 +56,7 @@ export const RestockGrid: React.FC<{ agents?: Agent[] }> = () => {
         id: editingItem?.id
       });
       setEditingItem(null);
+      setIsEditorOpen(false);
       setError('');
     } catch (err) {
       console.error(err);
@@ -110,14 +115,14 @@ export const RestockGrid: React.FC<{ agents?: Agent[] }> = () => {
         </div>
       )}
 
-      {editingItem !== null && (
+      {isEditorOpen && (
         <>
-          <div className="side-panel-overlay" onClick={() => { setEditingItem(null); setError(''); }} />
+          <div className="side-panel-overlay" onClick={() => { setEditingItem(null); setIsEditorOpen(false); setError(''); }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 7000, width: '400px', maxWidth: '90vw' }}>
             <div className="panel-card">
               <div className="side-panel-header">
-                <h2>{editingItem.id ? '✏️ EDIT ITEM' : '🆕 NEW ITEM'}</h2>
-                <button className="side-panel-close" onClick={() => { setEditingItem(null); setError(''); }}>✕</button>
+                <h2>{editingItem ? '✏️ EDIT ITEM' : '🆕 NEW ITEM'}</h2>
+                <button className="side-panel-close" onClick={() => { setEditingItem(null); setIsEditorOpen(false); setError(''); }}>✕</button>
               </div>
               <div className="side-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
@@ -127,20 +132,20 @@ export const RestockGrid: React.FC<{ agents?: Agent[] }> = () => {
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <div style={{ flex: 1 }}>
                     <label className="form-label">Stock ปัจจุบัน</label>
-                    <input className="form-input" type="number" min="0" value={form.stock} onChange={e => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} />
+                    <input className="form-input" type="number" min="0" step="1" value={form.stock} onChange={e => setForm({ ...form, stock: Number.parseInt(e.target.value, 10) || 0 })} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label className="form-label">Min Threshold</label>
-                    <input className="form-input" type="number" min="1" value={form.threshold} onChange={e => setForm({ ...form, threshold: parseInt(e.target.value) || 1 })} />
+                    <input className="form-input" type="number" min="1" step="1" value={form.threshold} onChange={e => setForm({ ...form, threshold: Number.parseInt(e.target.value, 10) || 1 })} />
                   </div>
                 </div>
                 <div>
                   <label className="form-label">ราคา/หน่วย (THB)</label>
-                  <input className="form-input" type="number" min="0" value={form.price} onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} />
+                  <input className="form-input" type="number" min="0" step="0.01" value={form.price} onChange={e => setForm({ ...form, price: Number.parseFloat(e.target.value) || 0 })} />
                 </div>
                 {error && <div className="form-error">{error}</div>}
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                  <button className="btn btn-ghost" onClick={() => { setEditingItem(null); setError(''); }}>ยกเลิก</button>
+                  <button className="btn btn-ghost" onClick={() => { setEditingItem(null); setIsEditorOpen(false); setError(''); }}>ยกเลิก</button>
                   <button className="btn btn-primary" onClick={handleSaveItem}>💾 บันทึก</button>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Agent } from '../data/agents';
 import { useApp } from '../context/AppContext';
 import ConfirmationDialog from './ConfirmationDialog';
@@ -13,20 +13,11 @@ interface Task {
 
 export function AgentTaskManager({ agent }: { agent: Agent }) {
   const { addLog, addToast } = useApp();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(() => readTasks(agent.id));
   const [newTitle, setNewTitle] = useState('');
   const [newPriority, setNewPriority] = useState<Task['priority']>('medium');
   const [confirmDoneId, setConfirmDoneId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Task['status'] | 'all'>('all');
-
-  const load = () => {
-    try {
-      const raw = localStorage.getItem(`tasks-${agent.id}`);
-      setTasks(raw ? JSON.parse(raw) : []);
-    } catch { setTasks([]); }
-  };
-
-  useEffect(() => { load(); }, [agent.id]);
 
   const persist = (next: Task[]) => {
     localStorage.setItem(`tasks-${agent.id}`, JSON.stringify(next));
@@ -129,4 +120,16 @@ export function AgentTaskManager({ agent }: { agent: Agent }) {
       />
     </div>
   );
+}
+
+function readTasks(agentId: string): Task[] {
+  try {
+    const raw = localStorage.getItem(`tasks-${agentId}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn(`Could not load tasks for ${agentId}:`, error);
+    return [];
+  }
 }

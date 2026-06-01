@@ -1,24 +1,12 @@
 {
-  "inventory": [
-    { "id": "1", "name": "ASUS ROG RTX 4070 Ti", "stock": 45, "threshold": 20, "price": 28900 },
-    { "id": "2", "name": "AMD Ryzen 7 7800X3D", "stock": 12, "threshold": 15, "price": 14500 },
-    { "id": "3", "name": "Corsair Vengeance DDR5 32GB", "stock": 8, "threshold": 30, "price": 4200 },
-    { "id": "4", "name": "Samsung 990 PRO 2TB", "stock": 65, "threshold": 20, "price": 6500 }
-  ],
-  "orders": [
-    { "id": "1", "customer": "Advice IT (สาขาปิ่นเกล้า)", "item": "ASUS ROG RTX 4070 Ti", "quantity": 10, "status": "Pending", "date": "2026-05-31", "value": 289000 },
-    { "id": "2", "customer": "JIB Computer Group", "item": "AMD Ryzen 7 7800X3D", "quantity": 5, "status": "Shipped", "date": "2026-05-30", "value": 72500 },
-    { "id": "3", "customer": "Speed Computer", "item": "Samsung 990 PRO 2TB", "quantity": 8, "status": "Delivered", "date": "2026-05-28", "value": 52000 },
-    { "id": "4", "customer": "iHaveCPU", "item": "Corsair Vengeance DDR5 32GB", "quantity": 15, "status": "Delivered", "date": "2026-05-26", "value": 63000 },
-    { "id": "5", "customer": "Advice IT (สาขาพระราม 2)", "item": "ASUS ROG RTX 4070 Ti", "quantity": 3, "status": "Delivered", "date": "2026-05-24", "value": 86700 },
-    { "id": "6", "customer": "JIB (สาขาเซ็นทรัลลาดพร้าว)", "item": "AMD Ryzen 7 7800X3D", "quantity": 4, "status": "Delivered", "date": "2026-05-22", "value": 58000 }
-  ],
+  "inventory": [],
+  "orders": [],
   "affiliate": {
-    "totalClicks": 12450,
-    "conversions": 892,
-    "revenueTHB": 154200.50
+    "totalClicks": 0,
+    "conversions": 0,
+    "revenueTHB": 0
   },
   "finance": {
-    "cashOnHand": 680000
+    "cashOnHand": 0
   }
 }

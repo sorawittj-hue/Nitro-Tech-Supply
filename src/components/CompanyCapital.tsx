@@ -18,7 +18,7 @@ export const CompanyCapital: React.FC = () => {
   }
 
   // Calculate dynamic business finance metrics
-  const cashOnHand = finance?.cashOnHand ?? 680000;
+  const cashOnHand = finance?.cashOnHand ?? 0;
   const inventoryValue = inventory.reduce((sum, item) => sum + item.stock * item.price, 0);
   const accountsReceivable = orders
     .filter(o => o.status === 'Pending')

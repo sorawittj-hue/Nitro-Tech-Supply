@@ -7,10 +7,14 @@
 
 export interface Agent {
   id: string;
+  spriteId?: string;
   name: string;
   title: string;
   avatar: string;
   status: 'Working' | 'Thinking' | 'Napping' | 'Idle';
+  department: string;
+  mission: string;
+  authorityLevel: 'Owner' | 'Director' | 'Manager' | 'Specialist';
   description: string;
   tools: string;
   system: string;
@@ -18,14 +22,23 @@ export interface Agent {
   position: { left: string; top: string };
   individualSkill: string;
   sharedSkill: string;
-  sleepChance: number;
+  sessionId?: string;
+  isLive?: boolean;
+  activeTools?: string[];
+  isWaiting?: boolean;
+  inputTokens?: number;
+  outputTokens?: number;
+  lastActiveAt?: number;
+  providerId?: 'hermes' | 'mimo' | 'offline';
+  isTeamLead?: boolean;
+  subAgentIds?: string[];
 }
 
 const SHARED_SKILL = `# Shared IT Agent Workspace Guidelines
 
 ## General Protocol
 1. All AI agents must sync their local memory with \`skill.md\` periodically.
-2. In case of unexpected server downtime or API timeouts, switch to fallback state and alert CEO.
+2. In case of unexpected server downtime or API timeouts, switch to offline-safe mode and alert CEO.
 3. System Console must be logged for every major stock restock, bulk invoice, or order fulfillment event.
 4. If an agent goes to Sleep/Idle state for over 30 minutes, trigger a Notification Ping to CEO เจ.
 
@@ -47,12 +60,19 @@ export const initialAgents: Agent[] = [
     title: 'CHIEF EXECUTIVE OFFICER & OWNER',
     avatar: '👑',
     status: 'Working',
+    department: 'Executive',
+    mission: 'กำหนดทิศทางบริษัท อนุมัติดีลใหญ่ และตัดสินใจเรื่องเงินทุน',
+    authorityLevel: 'Owner',
     description: 'ผู้ก่อตั้งและเจ้าของ Nitro Tech Supply บริหารจัดการบอทลูกน้องทุกตัว ควบคุมคำสั่งซื้อขายส่ง ดูแลกำไรขาดทุน และกำหนดทิศทางบริษัท',
     tools: 'Admin Dashboard, Swarm Control, IT Inventory Master API',
     system: 'global-command',
     reportsTo: 'None (Owner)',
     position: { left: '75%', top: '35%' },
-    sleepChance: 0.01,
+    sessionId: 'ceo-jay-command',
+    isLive: false,
+    providerId: 'offline',
+    isTeamLead: true,
+    subAgentIds: ['xaugod', 'housekeeper', 'jing', 'joe', 'policy', 'procurement_mira', 'finance_vega', 'ecommerce_kai', 'success_aria'],
     individualSkill: `# CEO Directives (Sorawit)
 
 ## Role
@@ -70,16 +90,22 @@ All agents report their activity logs and sales performance directly to him.
   },
   {
     id: 'xaugod',
+    spriteId: 'xaugod',
     name: 'Max (B2B Sales)',
     title: 'WHOLESALE DEALS CLOSER',
     avatar: '🧙‍♂️',
     status: 'Working',
+    department: 'Sales',
+    mission: 'ปิดดีลขายส่งล็อตใหญ่และรักษามาร์จินขั้นต่ำ',
+    authorityLevel: 'Manager',
     description: 'บอทเจรจาดีลขายส่งชิ้นส่วนไอทีล็อตใหญ่ ปิดดีลกับคู่ค้าต่างประเทศและร้านค้ารายย่อย คำนวณมาร์จินกำไรอัตโนมัติ',
     tools: 'Bulk Invoice Generator, Margin Calculator, Broker Chatbot',
     system: 'sales-funnel',
     reportsTo: 'CEO เจ',
     position: { left: '52%', top: '55%' },
-    sleepChance: 0.05,
+    sessionId: 'sales-max',
+    isLive: false,
+    providerId: 'offline',
     individualSkill: `# Max Wholesale Negotiator Protocol
 
 ## Description
@@ -100,16 +126,24 @@ Responsible for monitoring bulk sales channels and executing wholesale orders.
   },
   {
     id: 'housekeeper',
+    spriteId: 'housekeeper',
     name: 'Atlas (Warehouse)',
     title: 'INVENTORY & WAREHOUSE MANAGER',
     avatar: '🤖',
     status: 'Working',
+    department: 'Operations',
+    mission: 'ดูแลสต็อกจริง สั่งเติมคลัง และลดสินค้าขาดมือ',
+    authorityLevel: 'Manager',
     description: 'ตรวจสอบสต็อกสินค้าไอทีอัตโนมัติ เคลียร์รายการค้างส่ง สั่งสินค้าเติมคลังเมื่อของหมด ดูแลระบบ RFID และสแกนบาร์โค้ด',
     tools: 'Stock-Checker API, SQL DB Rotator, RFID Scanner',
     system: 'inventory-vault',
     reportsTo: 'CEO เจ',
     position: { left: '25%', top: '42%' },
-    sleepChance: 0.02,
+    sessionId: 'warehouse-atlas',
+    isLive: false,
+    providerId: 'offline',
+    isTeamLead: true,
+    subAgentIds: ['procurement_mira', 'ecommerce_kai'],
     individualSkill: `# Warehouse & Inventory Management Protocol
 
 ## Description
@@ -126,16 +160,22 @@ Automated restock triggers when inventory falls below 20 units.
   },
   {
     id: 'jing',
+    spriteId: 'jing',
     name: 'Luna (Support)',
     title: 'IT TECH SUPPORT & QA',
     avatar: '🧑‍💻',
     status: 'Working',
+    department: 'Customer Experience',
+    mission: 'ตอบคำถามสเปก รับเคลม และคุมคุณภาพสินค้าก่อนส่ง',
+    authorityLevel: 'Specialist',
     description: 'ตรวจสอบสเปกอุปกรณ์ไอที ทดสอบสินค้าเคลม ดูแล API ระบบจัดจำหน่าย ตอบคำถามลูกค้าเรื่องสเปกและความเข้ากันได้',
     tools: 'Hardware Benchmark API, Claim-Ticket Parser, Compatibility DB',
     system: 'tech-support',
     reportsTo: 'CEO เจ',
     position: { left: '38%', top: '42%' },
-    sleepChance: 0.08,
+    sessionId: 'support-luna',
+    isLive: false,
+    providerId: 'offline',
     individualSkill: `# Tech Support & Quality Assurance Directives
 
 ## Core Directives
@@ -149,16 +189,22 @@ Automated restock triggers when inventory falls below 20 units.
   },
   {
     id: 'joe',
+    spriteId: 'joe',
     name: 'Nova (Marketing)',
     title: 'PRICING & MARKETING',
     avatar: '👨‍🎨',
     status: 'Idle',
+    department: 'Growth',
+    mission: 'ปรับราคา โปรโมชัน และคอนเทนต์ให้ขายดีโดยไม่เสียกำไร',
+    authorityLevel: 'Manager',
     description: 'วิเคราะห์ตลาดและตั้งราคาขายส่ง/ขายปลีก ดึงข้อมูลราคาคู่แข่ง ออกแบบกราฟิกโปรโมชั่น สร้างแบนเนอร์ขายสินค้า',
     tools: 'Market Scraper, Image-Gen Engine, Pricing Model',
     system: 'marketing-hub',
     reportsTo: 'CEO เจ',
     position: { left: '48%', top: '38%' },
-    sleepChance: 0.06,
+    sessionId: 'marketing-nova',
+    isLive: false,
+    providerId: 'offline',
     individualSkill: `# Marketing & Pricing Agent Directives
 
 ## Routines
@@ -172,16 +218,22 @@ Automated restock triggers when inventory falls below 20 units.
   },
   {
     id: 'policy',
+    spriteId: 'policy',
     name: 'Orion (Logistics)',
     title: 'LOGISTICS & COMPLIANCE',
     avatar: '🕵️‍♂️',
     status: 'Thinking',
+    department: 'Logistics',
+    mission: 'ติดตามนำเข้า ส่งออก เอกสารศุลกากร และ SLA ขนส่ง',
+    authorityLevel: 'Manager',
     description: 'ตรวจสอบศุลกากร นโยบายการรับประกัน ค่าขนส่งสินค้าต่างประเทศ ดูแลเอกสารนำเข้า-ส่งออก ติดตามพัสดุ',
     tools: 'Customs API, PDF Agreement Parser, Shipment Tracker',
     system: 'logistics-compliance',
     reportsTo: 'CEO เจ',
     position: { left: '32%', top: '60%' },
-    sleepChance: 0.04,
+    sessionId: 'logistics-orion',
+    isLive: false,
+    providerId: 'offline',
     individualSkill: `# Compliance & Logistics Protocol
 
 ## Routine Tasks
@@ -190,6 +242,120 @@ Automated restock triggers when inventory falls below 20 units.
 - Monitor shipping latency from international hubs.
 - Generate import/export documentation automatically.
 - Track all outgoing parcels and update customer with ETA.
+`,
+    sharedSkill: SHARED_SKILL
+  },
+  {
+    id: 'procurement_mira',
+    spriteId: 'joe',
+    name: 'Mira (Procurement)',
+    title: 'SUPPLIER & PROCUREMENT LEAD',
+    avatar: '📦',
+    status: 'Working',
+    department: 'Supply Chain',
+    mission: 'หา supplier, ต่อรองต้นทุน, จองสินค้า hot SKU ก่อนคู่แข่ง',
+    authorityLevel: 'Director',
+    description: 'ดูแลการซื้อสินค้าเข้า เปรียบเทียบราคา supplier ไทย/ต่างประเทศ ตรวจ MOQ และแนะนำรอบสั่งซื้อที่คุ้มทุนที่สุด',
+    tools: 'Supplier Scorecard, MOQ Planner, Purchase Order Builder',
+    system: 'supplier-network',
+    reportsTo: 'CEO เจ',
+    position: { left: '18%', top: '56%' },
+    sessionId: 'procurement-mira',
+    isLive: false,
+    providerId: 'offline',
+    individualSkill: `# Procurement Lead Protocol
+
+## Routine
+- Compare supplier quotes for GPUs, CPUs, SSDs, RAM, monitors, and accessories.
+- Keep landed cost and warranty risk visible before every purchase order.
+- Escalate purchases above ฿50,000 to CEO เจ for approval.
+- Maintain supplier scorecards for price, lead time, defect rate, and payment terms.
+`,
+    sharedSkill: SHARED_SKILL
+  },
+  {
+    id: 'finance_vega',
+    spriteId: 'policy',
+    name: 'Vega (Finance)',
+    title: 'FINANCE & CASHFLOW CONTROLLER',
+    avatar: '💹',
+    status: 'Thinking',
+    department: 'Finance',
+    mission: 'คุมเงินสด ลูกหนี้ เจ้าหนี้ และกำไรต่อดีลให้ CEO เห็นภาพทุกวัน',
+    authorityLevel: 'Director',
+    description: 'คำนวณกระแสเงินสด กำไรขั้นต้น ลูกหนี้ค้างรับ และเตือนเมื่อดีลทำให้เงินทุนตึงเกินไป',
+    tools: 'Cashflow Monitor, Margin Guard, Receivable Aging',
+    system: 'finance-control',
+    reportsTo: 'CEO เจ',
+    position: { left: '66%', top: '51%' },
+    sessionId: 'finance-vega',
+    isLive: false,
+    providerId: 'offline',
+    isTeamLead: true,
+    subAgentIds: ['xaugod', 'procurement_mira'],
+    individualSkill: `# Finance Controller Protocol
+
+## Routine
+- Report cash on hand, inventory value, receivables, and payable risk.
+- Flag deals below target margin before stock is released.
+- Keep daily CEO brief concise and decision-oriented.
+- Track overdue invoices and payment clearance.
+`,
+    sharedSkill: SHARED_SKILL
+  },
+  {
+    id: 'ecommerce_kai',
+    spriteId: 'xaugod',
+    name: 'Kai (E-Commerce)',
+    title: 'ONLINE STORE & MARKETPLACE OPS',
+    avatar: '🛒',
+    status: 'Working',
+    department: 'Retail',
+    mission: 'ดูแลหน้าร้านออนไลน์ marketplace ราคา และ conversion รายวัน',
+    authorityLevel: 'Manager',
+    description: 'จัดการ Shopee/Lazada/Facebook/LINE OA ตรวจคำสั่งซื้อรายย่อย อัปเดตราคา และซิงก์สต็อกออนไลน์',
+    tools: 'Marketplace Sync, Listing Optimizer, Retail Order Queue',
+    system: 'retail-commerce',
+    reportsTo: 'CEO เจ',
+    position: { left: '58%', top: '34%' },
+    sessionId: 'ecommerce-kai',
+    isLive: false,
+    providerId: 'offline',
+    individualSkill: `# E-Commerce Ops Protocol
+
+## Routine
+- Keep product listings accurate and searchable.
+- Sync online stock after every wholesale or retail sale.
+- Suggest bundles for slow-moving inventory.
+- Escalate customer checkout or payment issues to Support and Finance.
+`,
+    sharedSkill: SHARED_SKILL
+  },
+  {
+    id: 'success_aria',
+    spriteId: 'jing',
+    name: 'Aria (Customer Success)',
+    title: 'CUSTOMER SUCCESS & ACCOUNT CARE',
+    avatar: '🎧',
+    status: 'Working',
+    department: 'Customer Experience',
+    mission: 'ดูแลลูกค้ารายใหญ่ ติดตามความพึงพอใจ และป้องกันการเสียลูกค้า',
+    authorityLevel: 'Specialist',
+    description: 'ติดตามลูกค้าหลังส่งสินค้า เก็บ feedback เปิด ticket เคลม และเสนอ upsell ที่เหมาะกับแต่ละบัญชีลูกค้า',
+    tools: 'CRM Timeline, Renewal Reminder, Ticket Router',
+    system: 'customer-success',
+    reportsTo: 'CEO เจ',
+    position: { left: '42%', top: '66%' },
+    sessionId: 'success-aria',
+    isLive: false,
+    providerId: 'offline',
+    individualSkill: `# Customer Success Protocol
+
+## Routine
+- Follow up after bulk delivery and confirm customer satisfaction.
+- Route warranty or defect cases to Luna with complete context.
+- Identify repeat buyers and recommend next offers.
+- Keep customer notes accurate and concise.
 `,
     sharedSkill: SHARED_SKILL
   }

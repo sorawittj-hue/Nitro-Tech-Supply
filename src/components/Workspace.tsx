@@ -1,31 +1,48 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import type { Agent } from '../data/agents';
 import { PixelCharacter } from './PixelCharacter';
 
 interface WorkspaceProps {
   agents: Agent[];
   onSelectAgent: (agent: Agent) => void;
+  onMoveAgent: (agentId: string, position: Agent['position']) => void;
+  onResetLayout: () => void;
   selectedAgentId?: string;
   projectProgress: number;
+  debugMode?: boolean;
 }
 
-// Generate ambient particles
+interface DragState {
+  agentId: string;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  moved: boolean;
+}
+
 const particles = Array.from({ length: 15 }, (_, i) => ({
   id: i,
-  left: `${Math.random() * 100}%`,
-  top: `${Math.random() * 100}%`,
-  delay: `${Math.random() * 8}s`,
-  duration: `${6 + Math.random() * 6}s`,
-  size: 2 + Math.random() * 2,
-  opacity: 0.2 + Math.random() * 0.4,
+  left: `${(i * 17 + 11) % 100}%`,
+  top: `${(i * 23 + 7) % 100}%`,
+  delay: `${(i % 8) * 0.8}s`,
+  duration: `${6 + (i % 6)}s`,
+  size: 2 + (i % 3) * 0.5,
+  opacity: 0.25 + (i % 4) * 0.1,
 }));
 
 export const Workspace: React.FC<WorkspaceProps> = ({
   agents,
   onSelectAgent,
+  onMoveAgent,
+  onResetLayout,
   selectedAgentId,
   projectProgress,
+  debugMode = false,
 }) => {
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
+  const suppressClickRef = useRef(false);
+  const [draggingAgentId, setDraggingAgentId] = useState<string | null>(null);
 
   const currentTime = useMemo(() => {
     const now = new Date();
@@ -39,8 +56,58 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const workingCount = agents.filter(a => a.status === 'Working').length;
   const totalCount = agents.length;
 
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>, agent: Agent) => {
+    if (event.button !== 0) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStateRef.current = {
+      agentId: agent.id,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    };
+    suppressClickRef.current = false;
+    setDraggingAgentId(agent.id);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current;
+    const workspace = workspaceRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId || !workspace) return;
+
+    const movement = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+    if (movement > 4) {
+      dragState.moved = true;
+      suppressClickRef.current = true;
+    }
+
+    const rect = workspace.getBoundingClientRect();
+    const left = clamp(((event.clientX - rect.left) / rect.width) * 100, 5, 95);
+    const top = clamp(((event.clientY - rect.top) / rect.height) * 100, 8, 92);
+
+    onMoveAgent(dragState.agentId, {
+      left: `${left.toFixed(1)}%`,
+      top: `${top.toFixed(1)}%`,
+    });
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current;
+    if (dragState?.pointerId !== event.pointerId) return;
+    dragStateRef.current = null;
+    setDraggingAgentId(null);
+  };
+
+  const handleAgentClick = (agent: Agent) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    onSelectAgent(agent);
+  };
+
   return (
-    <div className="workspace-hero">
+    <div className="workspace-hero" ref={workspaceRef}>
       {/* Background Image */}
       <div 
         className="workspace-bg-layer"
@@ -99,6 +166,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <span style={{ color: 'var(--text-muted)' }}> / {totalCount} Online</span>
             </span>
           </div>
+          <button className="hud-layout-reset" type="button" onClick={onResetLayout}>
+            Reset Layout
+          </button>
         </div>
 
         <div className="hud-right">
@@ -121,19 +191,25 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         const isThinking = agent.status === 'Thinking';
         const isIdle = agent.status === 'Idle';
         const isCeo = agent.id === 'ceo_jay';
+        const isTeamLead = Boolean(agent.isTeamLead);
+        const subTaskCount = agent.activeTools?.length ?? 0;
         
         const statusClass = isNapping ? 'napping' : isThinking ? 'thinking' : isIdle ? 'idle' : 'working';
 
         return (
           <div
             key={agent.id}
-            className="agent-node"
+            className={`agent-node ${draggingAgentId === agent.id ? 'dragging' : ''}`}
             style={{ 
               left: agent.position.left, 
               top: agent.position.top,
               zIndex: isSelected ? 30 : 15,
             }}
-            onClick={() => onSelectAgent(agent)}
+            onPointerDown={(event) => handlePointerDown(event, agent)}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onClick={() => handleAgentClick(agent)}
           >
             {/* Hover tooltip */}
             <div className="agent-tooltip">
@@ -159,12 +235,28 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                    'ว่างงาน'}
                 </span>
               </div>
-              <div className="tooltip-action">🖱️ คลิกเพื่อดูรายละเอียด</div>
+              <div className="tooltip-action">Drag to move desk • Click for details</div>
             </div>
 
             {/* Character sprite */}
             <div className={`agent-sprite-wrapper ${statusClass}`}>
-              <PixelCharacter spriteId={agent.id} size={isCeo ? 72 : 60} />
+              <PixelCharacter spriteId={agent.spriteId ?? agent.id} size={isCeo ? 72 : 60} />
+              {isTeamLead && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-12px',
+                  right: '-8px',
+                  fontSize: '18px',
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.45))',
+                }}>
+                  👑
+                </div>
+              )}
+              {subTaskCount > 0 && (
+                <div className="dock-item-badge" style={{ right: '-10px', top: '8px', width: 'auto', minWidth: '22px', height: '18px', borderRadius: '999px', padding: '1px 5px', fontSize: '10px' }}>
+                  x{subTaskCount}
+                </div>
+              )}
               
               {/* Zzz for sleeping */}
               {isNapping && (
@@ -192,6 +284,30 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             <div className={`agent-label ${statusClass} ${isCeo ? 'ceo' : ''}`}>
               {isCeo ? '👑 ' : ''}{agent.name.split('(')[0].replace('คุณ ', '').trim()}
             </div>
+
+            {debugMode && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                marginTop: '18px',
+                padding: '6px 8px',
+                minWidth: '170px',
+                border: '1px solid rgba(34, 211, 238, 0.35)',
+                background: 'rgba(2, 6, 23, 0.88)',
+                color: 'var(--text-muted)',
+                fontSize: '10px',
+                fontFamily: 'var(--font-mono)',
+                pointerEvents: 'none',
+                zIndex: 40,
+              }}>
+                <div>session: {agent.sessionId ?? 'none'}</div>
+                <div>live: {agent.isLive ? 'yes' : 'no'} / {agent.providerId ?? 'offline'}</div>
+                <div>tokens: {(agent.inputTokens ?? 0).toLocaleString()} in / {(agent.outputTokens ?? 0).toLocaleString()} out</div>
+                <div>last: {agent.lastActiveAt ? new Date(agent.lastActiveAt).toLocaleTimeString('en-US', { hour12: false }) : 'never'}</div>
+              </div>
+            )}
           </div>
         );
       })}
@@ -206,3 +322,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     </div>
   );
 };
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}

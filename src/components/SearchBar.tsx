@@ -41,7 +41,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onNavigate, onSelectAgent,
 
   const select = useCallback((agentId: string) => {
     onSelectAgent(agentId);
-    onNavigate('workspace');
+    onNavigate('none');
     close();
   }, [onSelectAgent, onNavigate, close]);
 
@@ -91,10 +91,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onNavigate, onSelectAgent,
     window.addEventListener('keydown', onGlobalKey);
     return () => window.removeEventListener('keydown', onGlobalKey);
   }, [isOpen, open, close]);
-
-  useEffect(() => {
-    if (isOpen && query === '') setActiveIndex(0);
-  }, [isOpen, query]);
 
   const renderDropdown = () => {
     if (!isOpen) return null;

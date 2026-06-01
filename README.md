@@ -1,13 +1,13 @@
 # 🏢 Nitro Tech Supply - AI-Powered IT Hardware Hub
 
-**Nitro Tech Supply** คือแพลตฟอร์มระบบริหารจัดการการค้าส่งและค้าปลีกชิ้นส่วนไอทีระดับพรีเมียม (IT Hardware Wholesale & Retail Dashboard) ที่ทำงานร่วมกับทีมผู้ช่วยปัญญาประดิษฐ์ (AI Swarm Team) ในรูปแบบของ Pixel Dashboard ที่สวยงาม รองรับการแสดงผลทุกอุปกรณ์แบบ Responsive PWA และเชื่อมต่อกับระบบฐานข้อมูลจริงพร้อมระบบสมองกล Google Gemini API
+**Nitro Tech Supply** คือแพลตฟอร์มระบบริหารจัดการการค้าส่งและค้าปลีกชิ้นส่วนไอทีระดับพรีเมียม (IT Hardware Wholesale & Retail Dashboard) ที่ทำงานร่วมกับทีมผู้ช่วยปัญญาประดิษฐ์ (AI Swarm Team) ในรูปแบบของ Pixel Dashboard ที่สวยงาม รองรับการแสดงผลทุกอุปกรณ์แบบ Responsive PWA และเชื่อมต่อกับระบบฐานข้อมูลจริงพร้อมระบบสมองกล MiMo AI
 
 ---
 
 ## 🌟 ฟีเจอร์หลัก (Key Features)
 
 ### 1. 🤖 ทีมผู้ช่วย AI Swarm (AI Agent Swarm)
-ระบบจำลองทีมทำงาน AI ที่คอยจัดการธุรการต่าง ๆ ภายในร้านและรายงานผลให้บอส (CEO เจ) ทราบ:
+ระบบทีม AI Agent สำหรับช่วยจัดการงานจริงภายในร้านและรายงานผลให้บอส (CEO เจ) ทราบ:
 *   **CEO เจ (Sorawit)**: ผู้ดูแลระบบและสั่งการภาพรวม
 *   **Max (B2B Sales)**: เจรจาดีลขายส่งล็อตใหญ่ ปิดการขาย คำนวณมาร์จินกำไร
 *   **Atlas (Warehouse)**: ผู้จัดการคลังสินค้า ดูแลระบบ RFID ตรวจเช็คและสั่งเติมสต็อกอัตโนมัติ
@@ -21,9 +21,9 @@
 *   **Live Inventory**: ระบบสต็อกสินค้าไอทีแบบ Dynamic ที่เชื่อมต่อฐานข้อมูลตรง เมื่อสต็อกลดลงหรือเพิ่มขึ้น มูลค่าคลังสินค้าจะคำนวณใหม่และแสดงผลทันที
 *   **Sales Analytics**: กราฟแสดงรายได้สะสม (Revenue Growth) และปริมาณการขายรายวัน (Daily Order Volumes) ที่ดึงข้อมูลจากยอดซื้อขายจริงในฐานข้อมูล
 
-### 3. 💬 Team Chat & AI Integration (Google Gemini API)
+### 3. 💬 Team Chat & AI Integration (MiMo AI)
 *   คุยกับทีมบอทไอทีของคุณได้โดยตรงผ่านหน้า **Team Chat**
-*   เชื่อมต่อกับ **Google Gemini API** (โมเดลแนะนำ: `gemini-3-flash-preview`) เพื่อประมวลผลให้บอทในทีมสลับกันมาตอบคำถามและรับคำสั่งงานของบอสอย่างชาญฉลาดและมีความเป็นมนุษย์
+*   เชื่อมต่อกับ **MiMo AI OpenAI-compatible API** (โมเดลแนะนำ: `mimo-v2.5-pro`) เพื่อประมวลผลให้บอทในทีมสลับกันมาตอบคำถามและรับคำสั่งงานของบอสอย่างชาญฉลาดและมีความเป็นมนุษย์
 
 ### 4. 🔌 โหมดออฟไลน์สำรอง (Resilient Offline Mode)
 *   หากระบบไม่สามารถเชื่อมต่อฐานข้อมูลหลัก (`json-server`) ได้ ระบบจะทำการเปิด **Offline Mode** โดยอัตโนมัติ 
@@ -34,8 +34,8 @@
 ## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
 
 *   **Frontend**: React 19, TypeScript, Vite, Vanilla CSS (Custom design system, pixel art graphics)
-*   **Backend Database**: JSON Server (สำหรับจำลอง REST API ที่รวดเร็ว)
-*   **AI Integration**: Google Gemini API (ผ่าน REST API endpoint หรือ `@google/genai` SDK)
+*   **Backend Database**: JSON Server (local development REST API ก่อนย้ายสู่ backend production)
+*   **AI Integration**: MiMo AI OpenAI-compatible API (`/v1/chat/completions`)
 *   **Data Visualization**: Recharts (สำหรับการทำกราฟแสดงวิเคราะห์การเงิน)
 
 ---
@@ -65,8 +65,8 @@ npm run dev:all
 
 ---
 
-## ⚙️ การตั้งค่า AI (Google Gemini API)
+## ⚙️ การตั้งค่า AI (MiMo AI)
 1. ไปที่หน้า **Settings** (รูปฟันเฟืองด้านล่างขวา)
-2. ใส่ **Google Gemini API Key** ของคุณ (ได้จาก Google AI Studio)
-3. เลือกโมเดลที่ต้องการใช้งาน (เช่น `gemini-3-flash-preview`)
+2. ใส่ **MiMo API Key** ของคุณ
+3. เลือกโมเดลที่ต้องการใช้งาน (เช่น `mimo-v2.5-pro`)
 4. บันทึกการตั้งค่าเพื่อเริ่มคุยกับทีมงาน AI ในส่วนของ **Team Chat** ได้ทันที!

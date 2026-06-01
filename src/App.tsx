@@ -1,19 +1,29 @@
+import { lazy, Suspense, useCallback } from 'react';
 import { useApp } from './context/AppContext';
 import { Workspace } from './components/Workspace';
 import { AgentModal } from './components/AgentModal';
 import { AffiliateTracker } from './components/AffiliateTracker';
-import { TeamChat } from './components/TeamChat';
 import { SystemConsole } from './components/SystemConsole';
 import type { ConsoleLog } from './components/SystemConsole';
-import { LofiPlayer } from './components/LofiPlayer';
 import { RestockGrid } from './components/RestockGrid';
 import { ActiveOrders } from './components/ActiveOrders';
 import { CompanyCapital } from './components/CompanyCapital';
-import { AnalyticsView } from './components/AnalyticsView';
+import { BusinessCommandCenter } from './components/BusinessCommandCenter';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastContainer } from './components/ToastContainer';
 import { SearchBar } from './components/SearchBar';
 import { KeyboardShortcuts } from './components/KeyboardShortcuts';
+import { initialAgents } from './data/agents';
+import type { Agent } from './data/agents';
+import { transport } from './transport';
+
+const TeamChat = lazy(() => import('./components/TeamChat').then(module => ({ default: module.TeamChat })));
+const AnalyticsView = lazy(() => import('./components/AnalyticsView').then(module => ({ default: module.AnalyticsView })));
+const LofiPlayer = lazy(() => import('./components/LofiPlayer').then(module => ({ default: module.LofiPlayer })));
+
+function PanelLoading() {
+  return <div className="skeleton-block" aria-label="Loading panel" />;
+}
 
 export default function App() {
   const app = useApp();
@@ -26,22 +36,62 @@ export default function App() {
     activePanel,
     sharedSkillText,
     currentTime,
-    geminiApiKey,
-    geminiModel,
+    aiApiKey,
+    aiModel,
     setSharedSkillText,
     setSelectedAgent,
     setActivePanel,
     setLogs,
-    setGeminiApiKey,
-    setGeminiModel,
+    setAiApiKey,
+    setAiModel,
+    setAgents,
     handleUpdateAgent,
     handleWakeAgent,
     togglePanel,
     addLog,
     isOffline,
+    chatProvider,
+    hermesConfig,
+    hermesConnected,
+    transportConnected,
+    lastAgentEventAt,
+    debugMode,
+    setChatProvider,
+    setHermesConfig,
+    setDebugMode,
+    testHermesConnection,
   } = app;
 
   const nappingCount = agents.filter(a => a.status === 'Napping').length;
+
+  const persistAgentLayout = useCallback((nextAgents: Agent[]) => {
+    const layout = nextAgents.reduce<Record<string, Agent['position']>>((acc, agent) => {
+      acc[agent.id] = agent.position;
+      return acc;
+    }, {});
+    localStorage.setItem('nitro-tech:layout', JSON.stringify(layout));
+    transport.send({ type: 'layout.save', layout, timestamp: Date.now() });
+  }, []);
+
+  const handleMoveAgent = useCallback((agentId: string, position: Agent['position']) => {
+    setAgents(prev => {
+      const next = prev.map(agent => agent.id === agentId ? { ...agent, position } : agent);
+      persistAgentLayout(next);
+      return next;
+    });
+  }, [persistAgentLayout, setAgents]);
+
+  const handleResetAgentLayout = useCallback(() => {
+    setAgents(prev => {
+      const next = prev.map(agent => {
+        const original = initialAgents.find(item => item.id === agent.id);
+        return original ? { ...agent, position: original.position } : agent;
+      });
+      persistAgentLayout(next);
+      return next;
+    });
+    addLog('INFO', 'Agent office layout reset to default desks');
+  }, [addLog, persistAgentLayout, setAgents]);
 
   return (
     <ErrorBoundary>
@@ -51,6 +101,7 @@ export default function App() {
           setActivePanel={setActivePanel}
           addLog={addLog}
           clearLogs={() => setLogs([])}
+          toggleDebugMode={() => setDebugMode(prev => !prev)}
           focusSearch={() => {
             const input = document.getElementById('global-search') as HTMLInputElement | null;
             if (input) input.focus();
@@ -86,7 +137,11 @@ export default function App() {
             ) : (
               <div className="header-status">
                 <div className={`header-status-dot ${isOffline ? 'alert' : ''}`} />
-                <span>{isOffline ? 'โหมดจำลอง (Offline) — ข้อมูลบันทึกในเครื่องชั่วคราว' : 'ทีม AI ทำงานปกติ — Swarm Health 100%'}</span>
+                <span>
+                  {isOffline
+                    ? 'Offline Mode — เก็บการแก้ไขไว้ในเครื่องชั่วคราวจนกว่า backend จะกลับมา'
+                    : `Live Ops — ${transportConnected ? 'Transport connected' : 'Transport offline'}${lastAgentEventAt ? ` • Event ${new Date(lastAgentEventAt).toLocaleTimeString('en-US', { hour12: false })}` : ''}`}
+                </span>
               </div>
             )}
           </div>
@@ -103,11 +158,14 @@ export default function App() {
           <Workspace
             agents={agents}
             onSelectAgent={setSelectedAgent}
+            onMoveAgent={handleMoveAgent}
+            onResetLayout={handleResetAgentLayout}
             selectedAgentId={selectedAgent?.id}
             projectProgress={projectProgress}
+            debugMode={debugMode}
           />
 
-          {activePanel !== 'none' && activePanel !== 'analytics' && activePanel !== 'settings' && (
+          {activePanel !== 'none' && activePanel !== 'analytics' && activePanel !== 'settings' && activePanel !== 'command' && (
             <>
               <div className="side-panel-overlay" onClick={() => setActivePanel('none')} />
               <div className="side-panel">
@@ -122,10 +180,19 @@ export default function App() {
                 </div>
                 <div className="side-panel-body">
                   {activePanel === 'console' && (
-                    <SystemConsole logs={logs as ConsoleLog[]} onClearLogs={() => setLogs([])} />
+                    <SystemConsole
+                      logs={logs as ConsoleLog[]}
+                      onClearLogs={() => setLogs([])}
+                      onRequestDiagnostics={() => {
+                        transport.send({ type: 'diagnostics.request', timestamp: Date.now() });
+                        addLog('INFO', 'Diagnostics requested from live transport');
+                      }}
+                    />
                   )}
                   {activePanel === 'chat' && (
-                    <TeamChat agents={agents} geminiApiKey={geminiApiKey} geminiModel={geminiModel} />
+                    <Suspense fallback={<PanelLoading />}>
+                      <TeamChat agents={agents} />
+                    </Suspense>
                   )}
                   {activePanel === 'income' && (
                     <>
@@ -153,7 +220,24 @@ export default function App() {
                   <button className="side-panel-close" onClick={() => setActivePanel('none')}>✕</button>
                 </div>
                 <div className="side-panel-body">
-                  <AnalyticsView />
+                  <Suspense fallback={<PanelLoading />}>
+                    <AnalyticsView />
+                  </Suspense>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activePanel === 'command' && (
+            <>
+              <div className="side-panel-overlay" onClick={() => setActivePanel('none')} />
+              <div className="side-panel" style={{ width: '92vw', maxWidth: '1280px' }}>
+                <div className="side-panel-header">
+                  <h2>🏢 CEO COMMAND CENTER</h2>
+                  <button className="side-panel-close" onClick={() => setActivePanel('none')}>✕</button>
+                </div>
+                <div className="side-panel-body">
+                  <BusinessCommandCenter agents={agents} onSelectAgent={setSelectedAgent} onNavigate={setActivePanel} />
                 </div>
               </div>
             </>
@@ -199,34 +283,121 @@ export default function App() {
 
                   <div className="panel-card">
                     <div className="panel-card-header">
-                      <span className="panel-card-title">🤖 GOOGLE GEMINI API INTEGRATION</span>
+                      <span className="panel-card-title">🤖 MIMO AI INTEGRATION</span>
                     </div>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
-                      ตั้งค่า API เพื่อเชื่อมต่อสมองกล Google Gemini ให้กับ Team Chat
+                      ตั้งค่า MiMo AI เพื่อให้ทีม AI agent ตอบคำสั่ง CEO ผ่าน OpenAI-compatible chat/completions
                     </p>
 
+                    <div className="form-error" style={{ marginBottom: '12px' }}>
+                      Production note: API key เก็บเฉพาะ runtime session แล้ว ไม่บันทึกลง localStorage แต่ระบบจริงควรย้าย MiMo call ไป backend proxy เพื่อไม่ expose key ใน browser
+                    </div>
+
                     <div style={{ marginBottom: '8px' }}>
-                      <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>GEMINI API KEY</label>
-                      <input type="password" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} className="chat-input-field" placeholder="AIzaSy..." style={{ width: '100%', marginTop: '4px' }} />
+                      <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>MIMO API KEY</label>
+                      <input type="password" value={aiApiKey} onChange={(e) => setAiApiKey(e.target.value)} className="chat-input-field" placeholder="sk-..." style={{ width: '100%', marginTop: '4px' }} />
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
                       <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>MODEL</label>
-                      <input type="text" value={geminiModel} onChange={(e) => setGeminiModel(e.target.value)} className="chat-input-field" placeholder="gemini-3-flash-preview" style={{ width: '100%', marginTop: '4px' }} />
+                      <input type="text" value={aiModel} onChange={(e) => setAiModel(e.target.value)} className="chat-input-field" placeholder="mimo-v2.5-pro" style={{ width: '100%', marginTop: '4px' }} />
                     </div>
 
-                    {geminiApiKey ? (
-                      <div className="badge badge-success">✅ Gemini API Ready</div>
+                    {aiApiKey ? (
+                      <div className="badge badge-success">✅ MiMo AI Ready</div>
                     ) : (
-                      <div className="badge badge-warning">⚠️ No API Key (using mock data)</div>
+                      <div className="badge badge-warning">⚠️ No API Key</div>
                     )}
+                  </div>
+
+                  <div className="panel-card">
+                    <div className="panel-card-header">
+                      <span className="panel-card-title">🤖 AI CHAT PROVIDER</span>
+                      <span className={`badge ${hermesConnected ? 'badge-success' : 'badge-warning'}`}>
+                        {hermesConnected ? 'HERMES CONNECTED' : 'HERMES OFFLINE'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>PROVIDER</label>
+                        <select
+                          value={chatProvider}
+                          onChange={(event) => setChatProvider(event.target.value as typeof chatProvider)}
+                          className="chat-input-field"
+                          style={{ width: '100%', marginTop: '4px' }}
+                        >
+                          <option value="hermes">Hermes Agent (AWS)</option>
+                          <option value="mimo">MiMo AI</option>
+                          <option value="offline">Offline / Not Configured</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>NITRO PROXY URL</label>
+                        <input
+                          type="text"
+                          value={hermesConfig.nitroProxyUrl}
+                          onChange={(event) => setHermesConfig(prev => ({ ...prev, nitroProxyUrl: event.target.value }))}
+                          className="chat-input-field"
+                          placeholder="http://localhost:8787"
+                          style={{ width: '100%', marginTop: '4px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>HERMES API URL</label>
+                        <input
+                          type="text"
+                          value={hermesConfig.hermesApiUrl}
+                          onChange={(event) => setHermesConfig(prev => ({ ...prev, hermesApiUrl: event.target.value }))}
+                          className="chat-input-field"
+                          placeholder="http://YOUR_AWS_IP:8642"
+                          style={{ width: '100%', marginTop: '4px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>HERMES API KEY</label>
+                        <input
+                          type="password"
+                          value={hermesConfig.hermesApiKey}
+                          onChange={(event) => setHermesConfig(prev => ({ ...prev, hermesApiKey: event.target.value }))}
+                          className="chat-input-field"
+                          placeholder="Bearer token from API_SERVER_KEY"
+                          style={{ width: '100%', marginTop: '4px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>SESSION KEY</label>
+                        <input
+                          type="text"
+                          value={hermesConfig.hermesSessionKey}
+                          onChange={(event) => setHermesConfig(prev => ({ ...prev, hermesSessionKey: event.target.value }))}
+                          className="chat-input-field"
+                          placeholder="nitro-tech-jay"
+                          style={{ width: '100%', marginTop: '4px' }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => void testHermesConnection()}
+                      >
+                        Test Hermes Connection
+                      </button>
+                    </div>
                   </div>
 
                   <div className="panel-card">
                     <div className="panel-card-header">
                       <span className="panel-card-title">🎵 LOFI PLAYER</span>
                     </div>
-                    <LofiPlayer />
+                    <Suspense fallback={<PanelLoading />}>
+                      <LofiPlayer />
+                    </Suspense>
                   </div>
                 </div>
               </div>
@@ -237,6 +408,10 @@ export default function App() {
         <nav className="dock-bar">
           <button className={`dock-item ${activePanel === 'none' ? 'active' : ''}`} onClick={() => setActivePanel('none')}>
             <span className="dock-item-icon">🏢</span><span>Office</span>
+          </button>
+
+          <button className={`dock-item ${activePanel === 'command' ? 'active' : ''}`} onClick={() => togglePanel('command')}>
+            <span className="dock-item-icon">🏢</span><span>CEO OS</span>
           </button>
 
           <button className={`dock-item ${activePanel === 'console' ? 'active' : ''}`} onClick={() => togglePanel('console')}>
@@ -267,7 +442,7 @@ export default function App() {
         </nav>
 
         {selectedAgent && (
-          <AgentModal agent={selectedAgent} onClose={() => setSelectedAgent(null)} onUpdateAgent={handleUpdateAgent} />
+          <AgentModal key={selectedAgent.id} agent={selectedAgent} onClose={() => setSelectedAgent(null)} onUpdateAgent={handleUpdateAgent} />
         )}
       </div>
     </ErrorBoundary>

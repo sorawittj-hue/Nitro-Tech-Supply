@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "vite",
     "backend": "json-server --watch db.json --port 3030",
+    "proxy": "node server/nitro-api-proxy.mjs",
     "dev:all": "concurrently \"npm run dev\" \"npm run backend\"",
+    "dev:full": "concurrently \"npm run dev\" \"npm run backend\" \"npm run proxy\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^2.7.0",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",

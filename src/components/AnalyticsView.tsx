@@ -14,7 +14,7 @@ export const AnalyticsView: React.FC = () => {
   }
 
   // Calculate live financial metrics
-  const cashOnHand = finance?.cashOnHand ?? 680000;
+  const cashOnHand = finance?.cashOnHand ?? 0;
   const inventoryValue = inventory.reduce((sum, item) => sum + item.stock * item.price, 0);
   const pendingInvoices = orders
     .filter(o => o.status === 'Pending')
@@ -32,7 +32,7 @@ export const AnalyticsView: React.FC = () => {
   
   const fulfillmentRate = totalOrdersCount > 0 
     ? (completedOrdersCount / totalOrdersCount) * 100 
-    : 100;
+    : 0;
 
   // Group by date for Daily Order Volumes
   const dailyMap: Record<string, number> = {};
@@ -93,7 +93,9 @@ export const AnalyticsView: React.FC = () => {
         <div className="kpi-card">
           <div className="kpi-label">FULFILLMENT RATE</div>
           <div className="kpi-value cyan">{fulfillmentRate.toFixed(1)}%</div>
-          <div className="kpi-sub">{completedOrdersCount} Shipments Completed</div>
+          <div className="kpi-sub">
+            {totalOrdersCount > 0 ? `${completedOrdersCount} Shipments Completed` : 'No orders tracked yet'}
+          </div>
         </div>
       </div>
 

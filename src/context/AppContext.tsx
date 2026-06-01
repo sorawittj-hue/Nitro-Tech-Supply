@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Agent } from '../data/agents';
 import type { ConsoleLog } from '../components/SystemConsole';
+import type { ChatProviderConfig, ChatProviderId } from '../providers/types';
 
 export interface InventoryItem {
   id: string;
@@ -52,8 +53,8 @@ export interface AppState {
   activePanel: string;
   sharedSkillText: string;
   currentTime: string;
-  geminiApiKey: string;
-  geminiModel: string;
+  aiApiKey: string;
+  aiModel: string;
   auditLog: AuditEntry[];
   toasts: ToastItem[];
   retryCount: number;
@@ -64,6 +65,12 @@ export interface AppState {
   loadingData: boolean;
   lastUpdated: string;
   isOffline: boolean;
+  chatProvider: ChatProviderId;
+  hermesConfig: ChatProviderConfig;
+  hermesConnected: boolean;
+  transportConnected: boolean;
+  lastAgentEventAt: number | null;
+  debugMode: boolean;
 }
 
 export interface AppContextValue extends AppState {
@@ -75,10 +82,14 @@ export interface AppContextValue extends AppState {
   setActivePanel: React.Dispatch<React.SetStateAction<string>>;
   setSharedSkillText: React.Dispatch<React.SetStateAction<string>>;
   setCurrentTime: React.Dispatch<React.SetStateAction<string>>;
-  setGeminiApiKey: React.Dispatch<React.SetStateAction<string>>;
-  setGeminiModel: React.Dispatch<React.SetStateAction<string>>;
+  setAiApiKey: React.Dispatch<React.SetStateAction<string>>;
+  setAiModel: React.Dispatch<React.SetStateAction<string>>;
   setRetryCount: React.Dispatch<React.SetStateAction<number>>;
   setIsOffline: React.Dispatch<React.SetStateAction<boolean>>;
+  setChatProvider: React.Dispatch<React.SetStateAction<ChatProviderId>>;
+  setHermesConfig: React.Dispatch<React.SetStateAction<ChatProviderConfig>>;
+  setHermesConnected: React.Dispatch<React.SetStateAction<boolean>>;
+  setDebugMode: React.Dispatch<React.SetStateAction<boolean>>;
   addLog: (type: ConsoleLog['type'], message: string) => void;
   handleUpdateAgent: (updatedAgent: Agent) => void;
   handleWakeAgent: (agent: Agent) => void;
@@ -90,6 +101,7 @@ export interface AppContextValue extends AppState {
   adjustStock: (item: InventoryItem, delta: number) => Promise<void>;
   saveInventoryItem: (item: Omit<InventoryItem, 'id'> & { id?: string }) => Promise<void>;
   deleteInventoryItem: (id: string) => Promise<void>;
+  testHermesConnection: () => Promise<boolean>;
 }
 
 export const AppContext = createContext<AppContextValue | null>(null);

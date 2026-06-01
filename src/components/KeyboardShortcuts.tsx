@@ -5,6 +5,7 @@ interface KeyboardShortcutsProps {
   setActivePanel: (panel: string) => void;
   addLog: (type: 'INFO' | 'TRADE' | 'CRITICAL' | 'WARN', message: string) => void;
   clearLogs: () => void;
+  toggleDebugMode: () => void;
   focusSearch: () => void;
 }
 
@@ -13,6 +14,7 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
   setActivePanel,
   addLog,
   clearLogs,
+  toggleDebugMode,
   focusSearch,
 }) => {
   useEffect(() => {
@@ -30,35 +32,41 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
 
       if (key === '1') {
         e.preventDefault();
-        togglePanel('console');
+        togglePanel('command');
         return;
       }
 
       if (key === '2') {
         e.preventDefault();
-        togglePanel('chat');
+        togglePanel('console');
         return;
       }
 
       if (key === '3') {
         e.preventDefault();
-        togglePanel('income');
+        togglePanel('chat');
         return;
       }
 
       if (key === '4') {
         e.preventDefault();
-        togglePanel('inventory');
+        togglePanel('income');
         return;
       }
 
       if (key === '5') {
         e.preventDefault();
-        togglePanel('analytics');
+        togglePanel('inventory');
         return;
       }
 
       if (key === '6') {
+        e.preventDefault();
+        togglePanel('analytics');
+        return;
+      }
+
+      if (key === '7') {
         e.preventDefault();
         togglePanel('settings');
         return;
@@ -68,12 +76,19 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
         e.preventDefault();
         clearLogs();
         addLog('INFO', 'Console logs cleared');
+        return;
+      }
+
+      if (e.shiftKey && key === 'd') {
+        e.preventDefault();
+        toggleDebugMode();
+        addLog('INFO', 'Debug overlay toggled');
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [togglePanel, setActivePanel, addLog, clearLogs, focusSearch]);
+  }, [togglePanel, setActivePanel, addLog, clearLogs, focusSearch, toggleDebugMode]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

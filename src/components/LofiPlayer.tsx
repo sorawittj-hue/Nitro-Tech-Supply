@@ -40,7 +40,9 @@ export const LofiPlayer: React.FC = () => {
 
   const startAudio = useCallback(() => {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
       audioCtxRef.current = ctx;
       
       const osc = ctx.createOscillator();
@@ -58,14 +60,18 @@ export const LofiPlayer: React.FC = () => {
       gain.connect(ctx.destination);
       osc.start();
       oscillatorRef.current = osc;
-    } catch {}
+    } catch (error) {
+      console.warn('Lofi audio could not be started:', error);
+    }
   }, []);
 
   const stopAudio = useCallback(() => {
     try {
       oscillatorRef.current?.stop();
       audioCtxRef.current?.close();
-    } catch {}
+    } catch (error) {
+      console.warn('Lofi audio could not be stopped cleanly:', error);
+    }
     oscillatorRef.current = null;
     audioCtxRef.current = null;
   }, []);

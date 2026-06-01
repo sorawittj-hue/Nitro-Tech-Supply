@@ -506,6 +506,25 @@ body {
   box-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
 }
 
+.hud-layout-reset {
+  padding: 7px 12px;
+  background: rgba(6, 10, 19, 0.85);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-panel);
+  transition: var(--transition-fast);
+}
+
+.hud-layout-reset:hover {
+  color: var(--accent-cyan);
+  border-color: var(--border-glow-cyan);
+  background: rgba(34, 211, 238, 0.08);
+}
+
 /* ========================================
    AGENT CHARACTER ON WORKSPACE
    ======================================== */
@@ -513,19 +532,31 @@ body {
   position: absolute;
   z-index: 15;
   transform: translate(-50%, -50%);
-  cursor: pointer;
+  cursor: grab;
   display: flex;
   flex-direction: column;
   align-items: center;
   transition: z-index 0s;
+  touch-action: none;
+  user-select: none;
 }
 
 .agent-node:hover {
   z-index: 25;
 }
 
+.agent-node.dragging {
+  cursor: grabbing;
+  z-index: 35 !important;
+}
+
 .agent-node:hover .agent-sprite-wrapper {
   transform: scale(1.12);
+}
+
+.agent-node.dragging .agent-sprite-wrapper {
+  transform: scale(1.16);
+  filter: drop-shadow(0 10px 22px rgba(34, 211, 238, 0.35));
 }
 
 .agent-node:hover .agent-tooltip {
@@ -1897,6 +1928,240 @@ body {
    ======================================== */
 .chart-area {
   min-height: 300px;
+}
+
+/* ========================================
+   CEO COMMAND CENTER
+   ======================================== */
+.command-center {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  min-height: 100%;
+}
+
+.command-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.command-eyebrow {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--accent-cyan);
+  margin-bottom: 10px;
+}
+
+.command-hero h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.command-hero p {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.command-hero-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.command-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.command-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.command-metric-card,
+.command-section {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.command-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 16px;
+}
+
+.command-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.command-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.command-action {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.command-action-title {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.command-action-detail,
+.command-action-meta,
+.muted-line {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.command-action-detail {
+  margin-top: 4px;
+}
+
+.command-action-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.department-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.department-card {
+  padding: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.department-name {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.department-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.department-members button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-void);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.department-members button:hover {
+  border-color: var(--border-glow-cyan);
+  color: var(--text-primary);
+}
+
+.compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compact-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.compact-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-row strong {
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .command-metrics-grid,
+  .command-grid,
+  .command-grid.three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .command-center {
+    padding: 12px;
+  }
+
+  .command-hero {
+    flex-direction: column;
+  }
+
+  .command-hero-actions {
+    justify-content: flex-start;
+  }
+
+  .command-metrics-grid,
+  .command-grid,
+  .command-grid.three,
+  .department-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .command-action {
+    flex-direction: column;
+  }
+
+  .command-action-meta {
+    align-items: flex-start;
+  }
 }
 
 /* ========================================
