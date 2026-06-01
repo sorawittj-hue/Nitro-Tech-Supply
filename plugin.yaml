@@ -1,0 +1,17 @@
+manifest_version: 1
+name: nitro-tech-supply
+version: 0.1.0
+description: "Hermes workspace plugin for Nitro Tech Supply, a Thailand IT hardware wholesale and retail company operated by CEO Jay through an AI agent team."
+author: "Sorawit / Nitro Tech Supply"
+kind: standalone
+platforms:
+  - linux
+  - macos
+  - windows
+provides_tools:
+  - nitro_workspace_status
+  - nitro_agent_roster
+provides_hooks:
+  - pre_llm_call
+hooks:
+  - pre_llm_call

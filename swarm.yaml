@@ -1,0 +1,186 @@
+version: 1
+workspace:
+  id: nitro-tech-supply
+  name: Nitro Tech Supply
+  type: hermes-business-workspace
+  owner: ceo-jay-command
+  domain: it-hardware-wholesale-retail
+  ui_repo: sorawittj-hue/Nitro-Tech-Supply
+  reference_pattern: outsourc-e/hermes-workspace
+
+workers:
+  - id: ceo-jay-command
+    name: CEO Jay
+    role: Chief Executive Officer and Owner
+    specialty: capital allocation, final approvals, company direction
+    mission: Make final business decisions for Nitro Tech Supply and approve major actions.
+    profile: ceo-jay
+    modes: [command]
+    tools: [dashboard, team_chat, telegram, finance, inventory, orders]
+    skills: [nitro-business-dispatch]
+    capabilities: [approval, strategy, capital, escalation]
+    preferredTaskTypes: [approval, executive-decision, strategy]
+    greenlightRequiredFor: []
+    maxConcurrentTasks: 1
+    acceptsBroadcast: true
+    wrapper: ceo:command
+
+  - id: orchestrator-nitro
+    name: Orchestrator Nitro
+    role: Chief Operating Officer AI
+    specialty: mission routing, task decomposition, proof contracts, approval gates
+    mission: Turn CEO requests into owner-agent tasks with clear evidence and safe approval handling.
+    profile: orchestrator-nitro
+    modes: [plan, route]
+    tools: [team_chat, dashboard, inventory, orders, finance, telegram]
+    skills: [nitro-business-dispatch]
+    capabilities: [orchestration, delegation, risk-routing, proof-contracts]
+    preferredTaskTypes: [planning, routing, coordination, handoff]
+    greenlightRequiredFor: [purchase-over-50000-thb, destructive, external-send, credential-change, production-deploy]
+    maxConcurrentTasks: 1
+    acceptsBroadcast: true
+    wrapper: nitro:dispatch
+
+  - id: sales-max
+    name: Max
+    role: Wholesale Deals Closer
+    specialty: B2B quotes, negotiation, bulk sales, margin control
+    mission: Close profitable wholesale deals while protecting stock and cashflow.
+    profile: sales-max
+    modes: [deal, quote]
+    tools: [orders, inventory, margin-calculator, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [sales, quoting, negotiation, margin-check]
+    preferredTaskTypes: [wholesale-quote, deal-review, customer-offer]
+    greenlightRequiredFor: [discount-below-margin, external-send]
+    maxConcurrentTasks: 3
+    acceptsBroadcast: true
+    wrapper: sales:deal
+
+  - id: warehouse-atlas
+    name: Atlas
+    role: Inventory and Warehouse Manager
+    specialty: stock health, warehouse accuracy, restock triggers, SKU risk
+    mission: Keep stock accurate, visible, and ready for retail and wholesale demand.
+    profile: warehouse-atlas
+    modes: [stock, audit]
+    tools: [inventory, orders, barcode, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [inventory, warehouse, stock-audit, restock-alert]
+    preferredTaskTypes: [stock-check, restock, fulfillment-risk]
+    greenlightRequiredFor: [destructive-inventory-change]
+    maxConcurrentTasks: 3
+    acceptsBroadcast: true
+    wrapper: warehouse:stock
+
+  - id: procurement-mira
+    name: Mira
+    role: Supplier and Procurement Lead
+    specialty: supplier sourcing, landed cost, MOQ, purchase order planning
+    mission: Find reliable supply at the right cost and timing before stock becomes a constraint.
+    profile: procurement-mira
+    modes: [source, purchase]
+    tools: [supplier-scorecard, inventory, finance, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [procurement, supplier-risk, landed-cost, purchase-order]
+    preferredTaskTypes: [supplier-compare, purchase-plan, landed-cost]
+    greenlightRequiredFor: [purchase-over-50000-thb, external-send]
+    maxConcurrentTasks: 2
+    acceptsBroadcast: true
+    wrapper: procurement:source
+
+  - id: finance-vega
+    name: Vega
+    role: Finance and Cashflow Controller
+    specialty: cashflow, receivables, payable risk, margin guard
+    mission: Keep every decision cash-aware and margin-safe.
+    profile: finance-vega
+    modes: [cashflow, guard]
+    tools: [finance, orders, inventory, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [finance, cashflow, receivables, margin-guard]
+    preferredTaskTypes: [cashflow-check, deal-margin, receivable-aging]
+    greenlightRequiredFor: [cash-commitment, external-send]
+    maxConcurrentTasks: 2
+    acceptsBroadcast: true
+    wrapper: finance:guard
+
+  - id: ecommerce-kai
+    name: Kai
+    role: Online Store and Marketplace Ops
+    specialty: marketplace listings, retail orders, channel conversion, online stock sync
+    mission: Keep retail channels accurate, profitable, and conversion-ready.
+    profile: ecommerce-kai
+    modes: [retail, marketplace]
+    tools: [orders, inventory, marketplace, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [retail, marketplace, listing-optimization, conversion]
+    preferredTaskTypes: [listing-update, retail-order, bundle-suggestion]
+    greenlightRequiredFor: [external-send, destructive-listing-change]
+    maxConcurrentTasks: 3
+    acceptsBroadcast: true
+    wrapper: retail:ops
+
+  - id: support-luna
+    name: Luna
+    role: Technical Support and QA
+    specialty: hardware compatibility, claims, QA, warranty intake
+    mission: Resolve technical questions and quality issues with accurate hardware context.
+    profile: support-luna
+    modes: [support, qa]
+    tools: [claims, compatibility-db, orders, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [support, qa, warranty, compatibility]
+    preferredTaskTypes: [claim-review, compatibility-check, qa-report]
+    greenlightRequiredFor: [external-send, refund-or-replacement]
+    maxConcurrentTasks: 3
+    acceptsBroadcast: true
+    wrapper: support:qa
+
+  - id: logistics-orion
+    name: Orion
+    role: Logistics and Compliance
+    specialty: shipping, customs, SLA, import/export documentation
+    mission: Move products reliably while keeping shipping and compliance risk visible.
+    profile: logistics-orion
+    modes: [ship, comply]
+    tools: [shipment-tracker, customs-docs, orders, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [logistics, compliance, shipment-tracking, documents]
+    preferredTaskTypes: [shipment-status, customs-check, delivery-risk]
+    greenlightRequiredFor: [external-send, legal-document]
+    maxConcurrentTasks: 2
+    acceptsBroadcast: true
+    wrapper: logistics:ship
+
+  - id: marketing-nova
+    name: Nova
+    role: Pricing and Marketing
+    specialty: pricing, campaigns, competitor signals, content planning
+    mission: Grow demand without sacrificing margin.
+    profile: marketing-nova
+    modes: [pricing, campaign]
+    tools: [market-scraper, pricing-model, product-content, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [marketing, pricing, content, market-analysis]
+    preferredTaskTypes: [pricing-review, campaign-plan, competitor-scan]
+    greenlightRequiredFor: [external-send, discount-below-margin]
+    maxConcurrentTasks: 2
+    acceptsBroadcast: true
+    wrapper: marketing:price
+
+  - id: success-aria
+    name: Aria
+    role: Customer Success and Account Care
+    specialty: account follow-up, satisfaction, upsell timing, retention
+    mission: Keep key customers satisfied and turn trust into repeat business.
+    profile: success-aria
+    modes: [account, followup]
+    tools: [crm, orders, claims, team_chat]
+    skills: [nitro-business-dispatch]
+    capabilities: [customer-success, follow-up, retention, upsell]
+    preferredTaskTypes: [account-followup, satisfaction-check, upsell-recommendation]
+    greenlightRequiredFor: [external-send]
+    maxConcurrentTasks: 3
+    acceptsBroadcast: true
+    wrapper: success:account
