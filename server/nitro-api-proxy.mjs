@@ -190,7 +190,10 @@ function serveStaticApp(response, pathname) {
   }
 
   const content = readFileSync(fileUrl);
-  response.writeHead(200, { 'Content-Type': contentType(fileUrl.pathname) });
+  response.writeHead(200, {
+    'Content-Type': contentType(fileUrl.pathname),
+    'Cache-Control': cacheControl(fileUrl.pathname),
+  });
   response.end(content);
 }
 
@@ -210,4 +213,9 @@ function contentType(filename) {
   if (filename.endsWith('.ico')) return 'image/x-icon';
   if (filename.endsWith('.json')) return 'application/json; charset=utf-8';
   return 'application/octet-stream';
+}
+
+function cacheControl(filename) {
+  if (filename.endsWith('.html')) return 'no-store';
+  return 'public, max-age=60';
 }

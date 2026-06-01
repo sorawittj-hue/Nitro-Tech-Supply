@@ -56,7 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ];
   });
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3030' : getBrowserOrigin());
+  const apiBase = resolveApiBase(import.meta.env.VITE_API_BASE_URL);
 
   // Base logging and notification functions (must be declared first)
   const addLog = useCallback((type: ConsoleLog['type'], message: string) => {
@@ -479,6 +479,26 @@ function loadHermesConfig(): ChatProviderConfig {
 function getBrowserOrigin(): string {
   if (typeof window === 'undefined') return '';
   return window.location.origin;
+}
+
+function resolveApiBase(envApiBase?: string): string {
+  const configured = envApiBase?.trim() ?? '';
+  if (import.meta.env.DEV) {
+    return configured || 'http://localhost:3030';
+  }
+  if (!configured || isLocalhostUrl(configured)) {
+    return getBrowserOrigin();
+  }
+  return configured;
+}
+
+function isLocalhostUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
 }
 
 function loadChatProvider(proxyUrl?: string, hermesUrl?: string, hermesKey?: string, mimoKey?: string): ChatProviderId {
