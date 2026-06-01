@@ -1,8 +1,10 @@
 import http from 'node:http';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { URL } from 'node:url';
+import path from 'node:path';
 
 const ROOT = new URL('../', import.meta.url);
+const DIST_DIR = new URL('dist/', ROOT);
 loadEnvFile(new URL('.env', ROOT));
 loadEnvFile(new URL('.env.local', ROOT));
 
@@ -80,6 +82,11 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === 'GET') {
+      serveStaticApp(response, url.pathname);
+      return;
+    }
+
     sendJson(response, 404, { error: { message: 'Endpoint not found.' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected proxy error.';
@@ -147,4 +154,39 @@ function loadEnvFile(fileUrl) {
 
 function trimSlash(value) {
   return value.replace(/\/$/, '');
+}
+
+function serveStaticApp(response, pathname) {
+  const safePath = normalizeStaticPath(pathname);
+  const candidate = new URL(safePath, DIST_DIR);
+  const fileUrl = existsSync(candidate) && statSync(candidate).isFile()
+    ? candidate
+    : new URL('index.html', DIST_DIR);
+
+  if (!existsSync(fileUrl)) {
+    sendJson(response, 404, { error: { message: 'Frontend build not found. Run npm run build first.' } });
+    return;
+  }
+
+  const content = readFileSync(fileUrl);
+  response.writeHead(200, { 'Content-Type': contentType(fileUrl.pathname) });
+  response.end(content);
+}
+
+function normalizeStaticPath(pathname) {
+  const decoded = decodeURIComponent(pathname);
+  const clean = path.posix.normalize(decoded).replace(/^(\.\.(\/|\\|$))+/, '');
+  if (clean === '/' || clean === '.') return 'index.html';
+  return clean.replace(/^\//, '');
+}
+
+function contentType(filename) {
+  if (filename.endsWith('.html')) return 'text/html; charset=utf-8';
+  if (filename.endsWith('.js')) return 'text/javascript; charset=utf-8';
+  if (filename.endsWith('.css')) return 'text/css; charset=utf-8';
+  if (filename.endsWith('.svg')) return 'image/svg+xml';
+  if (filename.endsWith('.png')) return 'image/png';
+  if (filename.endsWith('.ico')) return 'image/x-icon';
+  if (filename.endsWith('.json')) return 'application/json; charset=utf-8';
+  return 'application/octet-stream';
 }

@@ -462,7 +462,7 @@ function loadHermesConfig(): ChatProviderConfig {
     hermesApiUrl: import.meta.env.VITE_HERMES_API_URL || '',
     hermesApiKey: import.meta.env.VITE_HERMES_API_KEY || '',
     hermesSessionKey: import.meta.env.VITE_HERMES_SESSION_KEY || 'nitro-tech-jay',
-    nitroProxyUrl: import.meta.env.VITE_NITRO_PROXY_URL || (import.meta.env.DEV ? 'http://localhost:8787' : ''),
+    nitroProxyUrl: import.meta.env.VITE_NITRO_PROXY_URL || (import.meta.env.DEV ? 'http://localhost:8787' : getBrowserOrigin()),
   };
 
   try {
@@ -474,6 +474,11 @@ function loadHermesConfig(): ChatProviderConfig {
     console.warn('Could not load Hermes config:', error);
     return envConfig;
   }
+}
+
+function getBrowserOrigin(): string {
+  if (typeof window === 'undefined') return '';
+  return window.location.origin;
 }
 
 function loadChatProvider(proxyUrl?: string, hermesUrl?: string, hermesKey?: string, mimoKey?: string): ChatProviderId {
