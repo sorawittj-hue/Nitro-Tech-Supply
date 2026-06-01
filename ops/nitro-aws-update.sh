@@ -27,7 +27,7 @@ git -C "$APP_DIR" fetch origin main
 git -C "$APP_DIR" pull --ff-only origin main
 
 log "Installing dependencies"
-npm --prefix "$APP_DIR" install
+npm --prefix "$APP_DIR" ci
 
 log "Building frontend"
 npm --prefix "$APP_DIR" run build
