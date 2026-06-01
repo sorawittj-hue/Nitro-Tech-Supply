@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Agent } from '../data/agents';
 import { PixelCharacter } from './PixelCharacter';
 
@@ -19,6 +19,15 @@ interface DragState {
   startY: number;
   moved: boolean;
 }
+
+interface AgentWalkState {
+  x: number;
+  y: number;
+  facing: 'left' | 'right';
+  moving: boolean;
+}
+
+type AgentWalkMap = Record<string, AgentWalkState>;
 
 const particles = Array.from({ length: 15 }, (_, i) => ({
   id: i,
@@ -43,6 +52,27 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const dragStateRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
   const [draggingAgentId, setDraggingAgentId] = useState<string | null>(null);
+  const [agentWalkMap, setAgentWalkMap] = useState<AgentWalkMap>({});
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+
+    const updateWalk = () => {
+      setAgentWalkMap(prev => {
+        const next: AgentWalkMap = {};
+        agents.forEach(agent => {
+          const previous = prev[agent.id];
+          next[agent.id] = createWalkState(agent, previous, draggingAgentId === agent.id);
+        });
+        return next;
+      });
+    };
+
+    updateWalk();
+    const interval = window.setInterval(updateWalk, 2400);
+    return () => window.clearInterval(interval);
+  }, [agents, draggingAgentId]);
 
   const currentTime = useMemo(() => {
     const now = new Date();
@@ -193,18 +223,22 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         const isCeo = agent.id === 'ceo_jay';
         const isTeamLead = Boolean(agent.isTeamLead);
         const subTaskCount = agent.activeTools?.length ?? 0;
+        const walkState = agentWalkMap[agent.id] ?? { x: 0, y: 0, facing: 'right', moving: false };
+        const walkStyle = {
+          left: agent.position.left,
+          top: agent.position.top,
+          zIndex: isSelected ? 30 : 15,
+          '--walk-x': `${walkState.x}px`,
+          '--walk-y': `${walkState.y}px`,
+        } as CSSProperties;
         
         const statusClass = isNapping ? 'napping' : isThinking ? 'thinking' : isIdle ? 'idle' : 'working';
 
         return (
           <div
             key={agent.id}
-            className={`agent-node ${draggingAgentId === agent.id ? 'dragging' : ''}`}
-            style={{ 
-              left: agent.position.left, 
-              top: agent.position.top,
-              zIndex: isSelected ? 30 : 15,
-            }}
+            className={`agent-node ${draggingAgentId === agent.id ? 'dragging' : ''} ${walkState.moving ? 'walking' : 'standing'}`}
+            style={walkStyle}
             onPointerDown={(event) => handlePointerDown(event, agent)}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -239,7 +273,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             </div>
 
             {/* Character sprite */}
-            <div className={`agent-sprite-wrapper ${statusClass}`}>
+            <div className={`agent-sprite-wrapper ${statusClass} walk-${walkState.facing}`}>
               <PixelCharacter spriteId={agent.spriteId ?? agent.id} size={isCeo ? 72 : 60} />
               {isTeamLead && (
                 <div style={{
@@ -325,4 +359,42 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function createWalkState(agent: Agent, previous?: AgentWalkState, isDragging = false): AgentWalkState {
+  if (isDragging || agent.status === 'Napping') {
+    return { x: 0, y: 0, facing: previous?.facing ?? 'right', moving: false };
+  }
+
+  const originX = parsePercent(agent.position.left);
+  const originY = parsePercent(agent.position.top);
+  const radius = getWalkRadius(agent);
+  const homeBiasX = previous ? -previous.x * 0.45 : 0;
+  const homeBiasY = previous ? -previous.y * 0.45 : 0;
+  const edgeBiasX = originX < 10 ? radius : originX > 90 ? -radius : 0;
+  const edgeBiasY = originY < 12 ? radius : originY > 88 ? -radius : 0;
+  const jitterX = (Math.random() * 2 - 1) * radius;
+  const jitterY = (Math.random() * 2 - 1) * radius * 0.55;
+  const x = Math.round(clamp(homeBiasX + edgeBiasX + jitterX, -radius, radius));
+  const y = Math.round(clamp(homeBiasY + edgeBiasY + jitterY, -radius * 0.55, radius * 0.55));
+  const deltaX = x - (previous?.x ?? 0);
+
+  return {
+    x,
+    y,
+    facing: deltaX < -1 ? 'left' : deltaX > 1 ? 'right' : previous?.facing ?? 'right',
+    moving: Math.abs(x - (previous?.x ?? 0)) + Math.abs(y - (previous?.y ?? 0)) > 3,
+  };
+}
+
+function getWalkRadius(agent: Agent): number {
+  if (agent.id === 'ceo_jay') return 10;
+  if (agent.status === 'Thinking') return 16;
+  if (agent.status === 'Idle') return 8;
+  return agent.isTeamLead ? 22 : 28;
+}
+
+function parsePercent(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 50;
 }

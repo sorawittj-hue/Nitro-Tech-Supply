@@ -208,6 +208,18 @@ body {
   50% { box-shadow: 0 0 0 4px transparent; }
 }
 
+@keyframes agent-walk-bob {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  25% { transform: translateY(-2px) scaleY(1.02) rotate(-1deg); }
+  50% { transform: translateY(0) scaleY(0.98); }
+  75% { transform: translateY(-2px) scaleY(1.02) rotate(1deg); }
+}
+
+@keyframes work-pulse {
+  0%, 100% { opacity: 0.22; transform: translateX(-50%) scaleX(0.8); }
+  50% { opacity: 0.5; transform: translateX(-50%) scaleX(1.1); }
+}
+
 /* ========================================
    APP LAYOUT
    ======================================== */
@@ -554,12 +566,12 @@ body {
 .agent-node {
   position: absolute;
   z-index: 15;
-  transform: translate(-50%, -50%);
+  transform: translate(calc(-50% + var(--walk-x, 0px)), calc(-50% + var(--walk-y, 0px)));
   cursor: grab;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: z-index 0s;
+  transition: transform 1.6s ease-in-out, z-index 0s;
   touch-action: none;
   user-select: none;
   will-change: transform;
@@ -572,6 +584,20 @@ body {
 .agent-node.dragging {
   cursor: grabbing;
   z-index: 35 !important;
+  transition: z-index 0s;
+}
+
+.agent-node.walking::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  width: 42px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(34, 211, 238, 0.28), transparent 68%);
+  pointer-events: none;
+  animation: work-pulse 1.2s ease-in-out infinite;
 }
 
 .agent-node:hover .agent-sprite-wrapper {
@@ -594,6 +620,17 @@ body {
   transition: transform var(--transition-bounce);
   animation: breathe 3s ease-in-out infinite;
   transform-origin: bottom center;
+}
+
+.agent-node.walking .agent-sprite-wrapper.working,
+.agent-node.walking .agent-sprite-wrapper.thinking,
+.agent-node.walking .agent-sprite-wrapper.idle {
+  animation: agent-walk-bob 0.65s steps(2, end) infinite;
+}
+
+.agent-sprite-wrapper.walk-left svg {
+  transform: scaleX(-1);
+  transform-origin: center;
 }
 
 .agent-sprite-wrapper.napping {
@@ -1876,7 +1913,7 @@ body {
   }
 
   .agent-node {
-    transform: translate(-50%, -50%) scale(0.94);
+    transform: translate(calc(-50% + var(--walk-x, 0px)), calc(-50% + var(--walk-y, 0px))) scale(0.94);
   }
 
   .agent-node:hover .agent-sprite-wrapper {
@@ -1955,7 +1992,7 @@ body {
   }
 
   .agent-node {
-    transform: translate(-50%, -50%) scale(0.84);
+    transform: translate(calc(-50% + var(--walk-x, 0px)), calc(-50% + var(--walk-y, 0px))) scale(0.84);
   }
 
   .agent-label {
@@ -2126,7 +2163,7 @@ body {
   }
   
   .agent-node {
-    transform: translate(-50%, -50%) scale(0.68);
+    transform: translate(calc(-50% + var(--walk-x, 0px)), calc(-50% + var(--walk-y, 0px))) scale(0.68);
   }
 
   .agent-label {
@@ -2189,7 +2226,7 @@ body {
   }
 
   .agent-node {
-    transform: translate(-50%, -50%) scale(0.58);
+    transform: translate(calc(-50% + var(--walk-x, 0px)), calc(-50% + var(--walk-y, 0px))) scale(0.58);
   }
 
   .agent-label {
