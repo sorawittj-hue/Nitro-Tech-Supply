@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Agent } from '../data/agents';
 import { PixelCharacter } from './PixelCharacter';
+import { isCeoAgent } from '../lib/agentIdentity';
 
 interface WorkspaceProps {
   agents: Agent[];
@@ -397,8 +398,4 @@ function getWalkRadius(agent: Agent): number {
 function parsePercent(value: string): number {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 50;
-}
-
-function isCeoAgent(agent: Agent): boolean {
-  return agent.id === 'ceo-jay-command' || agent.sessionId === 'ceo-jay-command' || agent.authorityLevel === 'Owner';
 }

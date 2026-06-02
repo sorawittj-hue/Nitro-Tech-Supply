@@ -18,6 +18,7 @@ import type {
 } from '../context/AppContext';
 import type { ConsoleLog } from '../components/SystemConsole';
 import { transport } from '../transport';
+import { canonicalAgentId } from '../lib/agentIdentity';
 
 interface UseAgentEventsOptions {
   setAgents: Dispatch<SetStateAction<Agent[]>>;
@@ -47,8 +48,9 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
       setLastEventAt(Date.now());
 
       switch (message.type) {
-        case 'agent.status':
-          options.setAgents(prev => prev.map(agent => agent.id === message.agentId
+        case 'agent.status': {
+          const agentId = canonicalAgentId(message.agentId);
+          options.setAgents(prev => prev.map(agent => agent.id === agentId
             ? {
                 ...agent,
                 status: message.status,
@@ -58,8 +60,10 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
             : agent
           ));
           break;
-        case 'agent.token.usage':
-          options.setAgents(prev => prev.map(agent => agent.id === message.agentId
+        }
+        case 'agent.token.usage': {
+          const agentId = canonicalAgentId(message.agentId);
+          options.setAgents(prev => prev.map(agent => agent.id === agentId
             ? {
                 ...agent,
                 inputTokens: message.inputTokens,
@@ -69,6 +73,7 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
             : agent
           ));
           break;
+        }
         case 'agent.log':
           options.addLog(message.level, message.message);
           break;
