@@ -55,7 +55,7 @@ const server = http.createServer(async (request, response) => {
     response.setHeader('Access-Control-Allow-Origin', origin);
     response.setHeader('Vary', 'Origin');
   }
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Nitro-Write-Token');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Nitro-Write-Token, X-Hermes-Session-Key');
   response.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
 
   if (request.method === 'OPTIONS') {
@@ -83,6 +83,18 @@ const server = http.createServer(async (request, response) => {
       await proxyJson(response, `${HERMES_API_URL}/v1/health`, {
         method: 'GET',
         headers: hermesHeaders(),
+      }, 'Hermes is not configured.');
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/hermes/runs') {
+      const upstreamUrl = buildHermesRunsUrl(url);
+      await proxyJson(response, upstreamUrl, {
+        method: 'GET',
+        headers: {
+          ...hermesHeaders(),
+          'X-Hermes-Session-Key': url.searchParams.get('session_key') || HERMES_SESSION_KEY,
+        },
       }, 'Hermes is not configured.');
       return;
     }
@@ -172,6 +184,21 @@ server.listen(PORT, () => {
 
 function hermesHeaders() {
   return HERMES_API_KEY ? { Authorization: `Bearer ${HERMES_API_KEY}` } : {};
+}
+
+function buildHermesRunsUrl(requestUrl) {
+  if (!HERMES_API_URL) return '';
+  const upstreamUrl = new URL(`${HERMES_API_URL}/v1/runs`);
+  const sessionKey = requestUrl.searchParams.get('session_key') || HERMES_SESSION_KEY;
+  upstreamUrl.searchParams.set('session_key', sessionKey);
+
+  const platform = requestUrl.searchParams.get('platform');
+  if (platform) upstreamUrl.searchParams.set('platform', platform);
+
+  const since = requestUrl.searchParams.get('since');
+  if (since) upstreamUrl.searchParams.set('since', since);
+
+  return upstreamUrl.toString();
 }
 
 async function proxyJson(response, url, init, missingConfigMessage) {
