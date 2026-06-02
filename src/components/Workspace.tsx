@@ -220,7 +220,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         const isNapping = agent.status === 'Napping';
         const isThinking = agent.status === 'Thinking';
         const isIdle = agent.status === 'Idle';
-        const isCeo = agent.id === 'ceo_jay';
+        const isCeo = isCeoAgent(agent);
         const isTeamLead = Boolean(agent.isTeamLead);
         const subTaskCount = agent.activeTools?.length ?? 0;
         const walkState = agentWalkMap[agent.id] ?? { x: 0, y: 0, facing: 'right', moving: false };
@@ -388,7 +388,7 @@ function createWalkState(agent: Agent, previous?: AgentWalkState, isDragging = f
 }
 
 function getWalkRadius(agent: Agent): number {
-  if (agent.id === 'ceo_jay') return 10;
+  if (isCeoAgent(agent)) return 10;
   if (agent.status === 'Thinking') return 16;
   if (agent.status === 'Idle') return 8;
   return agent.isTeamLead ? 22 : 28;
@@ -397,4 +397,8 @@ function getWalkRadius(agent: Agent): number {
 function parsePercent(value: string): number {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 50;
+}
+
+function isCeoAgent(agent: Agent): boolean {
+  return agent.id === 'ceo-jay-command' || agent.sessionId === 'ceo-jay-command' || agent.authorityLevel === 'Owner';
 }

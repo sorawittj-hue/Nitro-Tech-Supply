@@ -209,7 +209,7 @@ export const TeamChat: React.FC<TeamChatProps> = ({ agents }) => {
 
 function buildSystemPrompt(agents: Agent[]): string {
   const roster = agents
-    .filter(agent => agent.id !== 'ceo_jay')
+    .filter(agent => !isCeoAgent(agent))
     .map(agent => `${agent.name} (${agent.title}): ${agent.description}`)
     .join('\n');
 
@@ -224,13 +224,15 @@ ${roster}`;
 
 function parseAgentReply(reply: string, agents: Agent[]): { sender: string; avatar: string; text: string } {
   const [senderPart, ...rest] = reply.split(':');
-  const defaultAgent = agents.find(agent => agent.id !== 'ceo_jay') || agents[0];
+  const defaultAgent = agents.find(agent => !isCeoAgent(agent)) || agents[0];
   if (rest.length === 0) {
     return { sender: defaultAgent.name, avatar: defaultAgent.avatar, text: reply };
   }
 
   const senderHint = senderPart.trim();
-  const matchedAgent = agents.find(agent => senderHint.includes(agent.name.split('(')[0].trim()) || agent.name.includes(senderHint));
+  const matchedAgent = agents.find(agent => !isCeoAgent(agent) && (
+    senderHint.includes(agent.name.split('(')[0].trim()) || agent.name.includes(senderHint)
+  ));
   return {
     sender: matchedAgent?.name || defaultAgent.name,
     avatar: matchedAgent?.avatar || defaultAgent.avatar,
@@ -242,4 +244,8 @@ function renderProviderStatus(provider: string, hermesConnected: boolean): strin
   if (provider === 'hermes') return hermesConnected ? '(HERMES LIVE 🟢)' : '(HERMES OFFLINE 🔴)';
   if (provider === 'mimo') return '(MIMO AI)';
   return '(NO PROVIDER)';
+}
+
+function isCeoAgent(agent: Agent): boolean {
+  return agent.id === 'ceo-jay-command' || agent.sessionId === 'ceo-jay-command' || agent.authorityLevel === 'Owner';
 }
