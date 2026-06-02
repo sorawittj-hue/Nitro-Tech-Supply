@@ -18,18 +18,11 @@ interface RunsResponse {
   }>;
 }
 
-interface PollingEndpoints {
-  healthUrl: string;
-  runsUrl: string;
-  headers?: Record<string, string>;
-}
-
 export class TelegramSyncService {
   private pollInterval: ReturnType<typeof setInterval> | null = null;
   private lastSeenAt = Date.now();
   private onNewMessage: ((msg: IncomingTelegramMessage) => void) | null = null;
   private unsubscribeTransport: (() => void) | null = null;
-  private readonly seenMessageIds = new Set<string>();
   private readonly config: ChatProviderConfig;
 
   constructor(config: ChatProviderConfig) {
@@ -41,12 +34,14 @@ export class TelegramSyncService {
     this.onNewMessage = callback;
     this.unsubscribeTransport = transport.onMessage(message => {
       if (message.type !== 'telegram.message') return;
-      this.emitTelegramMessage({
+      callback({
         id: `telegram-${message.timestamp ?? Date.now()}`,
         sender: message.sender || 'Jay (Telegram)',
+        avatar: '📱',
         text: message.text,
-        timestamp: message.timestamp ?? Date.now(),
-        time: message.time,
+        time: message.time || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+        isUser: true,
+        source: 'telegram',
       });
     });
     this.pollInterval = setInterval(() => {
@@ -63,21 +58,21 @@ export class TelegramSyncService {
   }
 
   private async poll(): Promise<void> {
-    if (!this.onNewMessage || !this.canPoll()) return;
+    if (!this.config.hermesApiUrl || !this.config.hermesApiKey || !this.onNewMessage) return;
 
-    const endpoints = this.buildPollingEndpoints();
-    const health = await fetch(endpoints.healthUrl, {
-      headers: endpoints.headers,
+    const baseUrl = this.config.hermesApiUrl.replace(/\/$/, '');
+    const health = await fetch(`${baseUrl}/v1/health`, {
+      headers: { Authorization: `Bearer ${this.config.hermesApiKey}` },
     }).catch(() => null);
     if (!health?.ok) return;
 
-    const url = new URL(endpoints.runsUrl);
+    const url = new URL(`${baseUrl}/v1/runs`);
     url.searchParams.set('session_key', this.config.hermesSessionKey || 'nitro-tech-jay');
     url.searchParams.set('platform', 'telegram');
     url.searchParams.set('since', String(this.lastSeenAt));
 
     const response = await fetch(url, {
-      headers: endpoints.headers,
+      headers: { Authorization: `Bearer ${this.config.hermesApiKey}` },
     }).catch(() => null);
     if (!response?.ok) return;
 
@@ -87,48 +82,16 @@ export class TelegramSyncService {
       .filter(message => message.source === 'telegram' && message.role === 'user')
       .forEach(message => {
         const timestamp = message.timestamp ?? message.created_at ?? Date.now();
-        this.emitTelegramMessage({
+        this.lastSeenAt = Math.max(this.lastSeenAt, timestamp);
+        this.onNewMessage?.({
           id: message.id || `telegram-${timestamp}`,
-          sender: message.sender || 'Jay (Telegram)',
+          sender: message.sender || 'Jay (Telegram 📱)',
+          avatar: '📱',
           text: message.text || message.content || '',
-          timestamp,
+          time: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+          isUser: true,
+          source: 'telegram',
         });
       });
-  }
-
-  private canPoll(): boolean {
-    return Boolean(this.config.nitroProxyUrl || (this.config.hermesApiUrl && this.config.hermesApiKey));
-  }
-
-  private buildPollingEndpoints(): PollingEndpoints {
-    if (this.config.nitroProxyUrl) {
-      const baseUrl = this.config.nitroProxyUrl.replace(/\/$/, '');
-      return {
-        healthUrl: `${baseUrl}/api/hermes/health`,
-        runsUrl: `${baseUrl}/api/hermes/runs`,
-      };
-    }
-
-    const baseUrl = this.config.hermesApiUrl.replace(/\/$/, '');
-    return {
-      healthUrl: `${baseUrl}/v1/health`,
-      runsUrl: `${baseUrl}/v1/runs`,
-      headers: { Authorization: `Bearer ${this.config.hermesApiKey}` },
-    };
-  }
-
-  private emitTelegramMessage(message: { id: string; sender: string; text: string; timestamp: number; time?: string }): void {
-    if (!message.text.trim() || this.seenMessageIds.has(message.id)) return;
-    this.seenMessageIds.add(message.id);
-    this.lastSeenAt = Math.max(this.lastSeenAt, message.timestamp);
-    this.onNewMessage?.({
-      id: message.id,
-      sender: message.sender,
-      avatar: 'TG',
-      text: message.text,
-      time: message.time || new Date(message.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-      isUser: true,
-      source: 'telegram',
-    });
   }
 }

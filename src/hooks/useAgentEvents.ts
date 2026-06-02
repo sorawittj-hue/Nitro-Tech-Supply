@@ -18,7 +18,6 @@ import type {
 } from '../context/AppContext';
 import type { ConsoleLog } from '../components/SystemConsole';
 import { transport } from '../transport';
-import { canonicalAgentId } from '../lib/agentIdentity';
 
 interface UseAgentEventsOptions {
   setAgents: Dispatch<SetStateAction<Agent[]>>;
@@ -48,9 +47,8 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
       setLastEventAt(Date.now());
 
       switch (message.type) {
-        case 'agent.status': {
-          const agentId = canonicalAgentId(message.agentId);
-          options.setAgents(prev => prev.map(agent => agent.id === agentId
+        case 'agent.status':
+          options.setAgents(prev => prev.map(agent => agent.id === message.agentId
             ? {
                 ...agent,
                 status: message.status,
@@ -60,42 +58,8 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
             : agent
           ));
           break;
-        }
-        case 'agent.task.start': {
-          const agentId = canonicalAgentId(message.agentId);
-          options.setAgents(prev => prev.map(agent => {
-            if (agent.id !== agentId) return agent;
-            const activeTools = appendUnique(agent.activeTools ?? [], message.taskId);
-            return {
-              ...agent,
-              status: 'Working',
-              isLive: true,
-              isWaiting: true,
-              activeTools,
-              lastActiveAt: Date.now(),
-            };
-          }));
-          options.addLog('INFO', `Agent task started: ${message.title} (${message.taskId})`);
-          break;
-        }
-        case 'agent.task.done': {
-          const agentId = canonicalAgentId(message.agentId);
-          options.setAgents(prev => prev.map(agent => {
-            if (agent.id !== agentId) return agent;
-            const activeTools = (agent.activeTools ?? []).filter(taskId => taskId !== message.taskId);
-            return {
-              ...agent,
-              isWaiting: activeTools.length > 0,
-              activeTools,
-              lastActiveAt: Date.now(),
-            };
-          }));
-          options.addLog('INFO', `Agent task done: ${message.taskId}${message.result ? ` - ${message.result}` : ''}`);
-          break;
-        }
-        case 'agent.token.usage': {
-          const agentId = canonicalAgentId(message.agentId);
-          options.setAgents(prev => prev.map(agent => agent.id === agentId
+        case 'agent.token.usage':
+          options.setAgents(prev => prev.map(agent => agent.id === message.agentId
             ? {
                 ...agent,
                 inputTokens: message.inputTokens,
@@ -105,7 +69,6 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
             : agent
           ));
           break;
-        }
         case 'agent.log':
           options.addLog(message.level, message.message);
           break;
@@ -144,9 +107,4 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
   }, [options]);
 
   return { isConnected, lastEventAt };
-}
-
-function appendUnique(items: string[], item: string): string[] {
-  if (items.includes(item)) return items;
-  return [...items, item];
 }

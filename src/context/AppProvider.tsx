@@ -21,7 +21,6 @@ import {
   parseShipmentData,
   parseSupplierData,
 } from '../lib/businessDataValidators';
-import { canonicalAgentId } from '../lib/agentIdentity';
 import { 
   AppContext, 
   type InventoryItem, 
@@ -597,7 +596,7 @@ function loadAgentLayout(defaultAgents: Agent[]): Agent[] {
     if (!raw) return defaultAgents;
     const saved = JSON.parse(raw) as Record<string, Agent['position']>;
     return defaultAgents.map(agent => {
-      const position = saved[agent.id] ?? findLegacyPosition(saved, agent.id);
+      const position = saved[agent.id];
       if (!position?.left || !position?.top) return agent;
       return { ...agent, position };
     });
@@ -605,11 +604,6 @@ function loadAgentLayout(defaultAgents: Agent[]): Agent[] {
     console.warn('Could not load saved agent layout:', error);
     return defaultAgents;
   }
-}
-
-function findLegacyPosition(saved: Record<string, Agent['position']>, canonicalId: string): Agent['position'] | undefined {
-  const legacyEntry = Object.entries(saved).find(([agentId]) => canonicalAgentId(agentId) === canonicalId);
-  return legacyEntry?.[1];
 }
 
 function loadHermesConfig(): ChatProviderConfig {

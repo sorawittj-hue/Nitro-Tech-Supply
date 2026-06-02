@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext';
 import type { BusinessCollection, InvoiceRecord, PurchaseOrderRecord, QuoteRecord } from '../context/AppContext';
 import type { Agent } from '../data/agents';
 import { openInvoiceDocument, openPurchaseOrderDocument, openQuoteDocument } from '../lib/businessDocuments';
-import { isCeoAgent } from '../lib/agentIdentity';
 
 type OpsTab = 'crm' | 'sales' | 'procurement' | 'service' | 'tasks';
 
@@ -45,7 +44,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
   const [paymentForm, setPaymentForm] = useState({ invoiceId: '', amount: 0, method: 'bank_transfer', reference: '' });
   const [purchaseForm, setPurchaseForm] = useState({ supplierId: '', description: '', totalCost: 0, expectedAt: nextDate(14) });
   const [claimForm, setClaimForm] = useState({ customerId: '', item: '', priority: 'medium' });
-  const [taskForm, setTaskForm] = useState({ agentId: firstAssignableAgentId(agents), title: '', priority: 'medium' });
+  const [taskForm, setTaskForm] = useState({ agentId: agents.find(agent => agent.id !== 'ceo_jay')?.id ?? '', title: '', priority: 'medium' });
 
   const selectedCustomerId = quoteForm.customerId || customers[0]?.id || '';
   const selectedInvoiceCustomerId = invoiceForm.customerId || customers[0]?.id || '';
@@ -55,8 +54,6 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
   const selectedSupplierId = purchaseForm.supplierId || suppliers[0]?.id || '';
   const selectedClaimCustomerId = claimForm.customerId || customers[0]?.id || '';
   const writesLocked = Boolean(nitroHealth?.dataWriteAuthRequired && !dataWriteToken);
-  const assignableAgents = useMemo(() => agents.filter(agent => !isCeoAgent(agent)), [agents]);
-  const ceoAgentId = useMemo(() => agents.find(isCeoAgent)?.id ?? 'ceo-jay-command', [agents]);
 
   const metrics = useMemo(() => {
     const openInvoices = invoices.filter(invoice => invoice.status !== 'Paid' && invoice.status !== 'Cancelled');
@@ -242,7 +239,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
       if (requiresApproval) {
         await createBusinessRecord('agentTasks', {
           id: makeId('task'),
-          agentId: ceoAgentId,
+          agentId: 'ceo_jay',
           title: `Approve purchase order ${purchaseOrderId} (${currencyFormatter.format(totalCost)})`,
           status: 'todo',
           priority: 'high',
@@ -280,7 +277,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
   };
 
   const createTask = () => {
-    const agentId = taskForm.agentId || assignableAgents[0]?.id;
+    const agentId = taskForm.agentId || agents.find(agent => agent.id !== 'ceo_jay')?.id;
     if (!agentId || !taskForm.title.trim()) {
       addToast('warning', 'Agent and task title are required');
       return;
@@ -511,7 +508,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
         <section className="business-ops-grid">
           <OpsForm title="Assign Agent Task">
             <select className="form-input" value={taskForm.agentId} onChange={event => setTaskForm(prev => ({ ...prev, agentId: event.target.value }))}>
-              {assignableAgents.map(agent => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
+              {agents.filter(agent => agent.id !== 'ceo_jay').map(agent => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
             </select>
             <input className="form-input" value={taskForm.title} onChange={event => setTaskForm(prev => ({ ...prev, title: event.target.value }))} placeholder="Task title" />
             <select className="form-input" value={taskForm.priority} onChange={event => setTaskForm(prev => ({ ...prev, priority: event.target.value }))}>
@@ -616,8 +613,4 @@ function tabLabel(tab: OpsTab): string {
   if (tab === 'procurement') return 'Procurement';
   if (tab === 'service') return 'Service';
   return 'Agent Tasks';
-}
-
-function firstAssignableAgentId(agents: Agent[]): string {
-  return agents.find(agent => !isCeoAgent(agent))?.id ?? '';
 }

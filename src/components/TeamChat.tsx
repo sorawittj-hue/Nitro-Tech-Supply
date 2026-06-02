@@ -5,7 +5,6 @@ import { createChatProvider } from '../providers/providerFactory';
 import { TelegramSyncService } from '../providers/telegramSyncService';
 import type { ChatMessage } from '../providers/types';
 import { transport } from '../transport';
-import { isCeoAgent } from '../lib/agentIdentity';
 
 interface TeamChatProps {
   agents: Agent[];
@@ -210,7 +209,7 @@ export const TeamChat: React.FC<TeamChatProps> = ({ agents }) => {
 
 function buildSystemPrompt(agents: Agent[]): string {
   const roster = agents
-    .filter(agent => !isCeoAgent(agent))
+    .filter(agent => agent.id !== 'ceo_jay')
     .map(agent => `${agent.name} (${agent.title}): ${agent.description}`)
     .join('\n');
 
@@ -225,15 +224,13 @@ ${roster}`;
 
 function parseAgentReply(reply: string, agents: Agent[]): { sender: string; avatar: string; text: string } {
   const [senderPart, ...rest] = reply.split(':');
-  const defaultAgent = agents.find(agent => !isCeoAgent(agent)) || agents[0];
+  const defaultAgent = agents.find(agent => agent.id !== 'ceo_jay') || agents[0];
   if (rest.length === 0) {
     return { sender: defaultAgent.name, avatar: defaultAgent.avatar, text: reply };
   }
 
   const senderHint = senderPart.trim();
-  const matchedAgent = agents.find(agent => !isCeoAgent(agent) && (
-    senderHint.includes(agent.name.split('(')[0].trim()) || agent.name.includes(senderHint)
-  ));
+  const matchedAgent = agents.find(agent => senderHint.includes(agent.name.split('(')[0].trim()) || agent.name.includes(senderHint));
   return {
     sender: matchedAgent?.name || defaultAgent.name,
     avatar: matchedAgent?.avatar || defaultAgent.avatar,

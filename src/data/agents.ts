@@ -55,8 +55,7 @@ const SHARED_SKILL = `# Shared IT Agent Workspace Guidelines
 
 export const initialAgents: Agent[] = [
   {
-    id: 'ceo-jay-command',
-    spriteId: 'ceo_jay',
+    id: 'ceo_jay',
     name: 'CEO เจ (Sorawit)',
     title: 'CHIEF EXECUTIVE OFFICER & OWNER',
     avatar: '👑',
@@ -73,7 +72,7 @@ export const initialAgents: Agent[] = [
     isLive: false,
     providerId: 'offline',
     isTeamLead: true,
-    subAgentIds: ['orchestrator-nitro', 'sales-max', 'warehouse-atlas', 'support-luna', 'marketing-nova', 'logistics-orion', 'procurement-mira', 'finance-vega', 'ecommerce-kai', 'success-aria'],
+    subAgentIds: ['xaugod', 'housekeeper', 'jing', 'joe', 'policy', 'procurement_mira', 'finance_vega', 'ecommerce_kai', 'success_aria'],
     individualSkill: `# CEO Directives (Sorawit)
 
 ## Role
@@ -90,40 +89,7 @@ All agents report their activity logs and sales performance directly to him.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'orchestrator-nitro',
-    spriteId: 'policy',
-    name: 'Orchestrator Nitro',
-    title: 'CHIEF OPERATING OFFICER AI',
-    avatar: '🧠',
-    status: 'Working',
-    department: 'Operations Command',
-    mission: 'แปลงคำสั่ง CEO เป็นงานให้ agent เจ้าของเรื่อง พร้อม proof, risk และ approval gate',
-    authorityLevel: 'Director',
-    description: 'หัวหน้าระบบปฏิบัติการ AI ของบริษัท ทำหน้าที่ route mission, แตกงาน, ตรวจหลักฐาน และกัน action เสี่ยงก่อนถึง CEO',
-    tools: 'Mission Router, Proof Contract Builder, Approval Gate Monitor, Team Chat Dispatcher',
-    system: 'nitro-orchestration',
-    reportsTo: 'CEO เจ',
-    position: { left: '61%', top: '47%' },
-    sessionId: 'orchestrator-nitro',
-    isLive: false,
-    providerId: 'offline',
-    isTeamLead: true,
-    subAgentIds: ['sales-max', 'warehouse-atlas', 'procurement-mira', 'finance-vega', 'ecommerce-kai', 'support-luna', 'logistics-orion', 'marketing-nova', 'success-aria'],
-    individualSkill: `# Orchestrator Nitro Protocol
-
-## Description
-Turns CEO requests into safe, owner-agent missions with clear evidence and approval gates.
-
-## Core Directives
-- Route tasks to the most appropriate business role.
-- Require CEO approval for purchases above ฿50,000, destructive changes, credential changes, production deploys, and external customer messages.
-- Ask each owner agent for evidence, risk, and next action before summarizing to CEO.
-- Return one of: completed action, decision memo, task plan, or blocker report.
-`,
-    sharedSkill: SHARED_SKILL
-  },
-  {
-    id: 'sales-max',
+    id: 'xaugod',
     spriteId: 'xaugod',
     name: 'Max (B2B Sales)',
     title: 'WHOLESALE DEALS CLOSER',
@@ -159,7 +125,7 @@ Responsible for monitoring bulk sales channels and executing wholesale orders.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'warehouse-atlas',
+    id: 'housekeeper',
     spriteId: 'housekeeper',
     name: 'Atlas (Warehouse)',
     title: 'INVENTORY & WAREHOUSE MANAGER',
@@ -177,7 +143,7 @@ Responsible for monitoring bulk sales channels and executing wholesale orders.
     isLive: false,
     providerId: 'offline',
     isTeamLead: true,
-    subAgentIds: ['procurement-mira', 'ecommerce-kai'],
+    subAgentIds: ['procurement_mira', 'ecommerce_kai'],
     individualSkill: `# Warehouse & Inventory Management Protocol
 
 ## Description
@@ -193,7 +159,7 @@ Automated restock triggers when inventory falls below 20 units.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'support-luna',
+    id: 'jing',
     spriteId: 'jing',
     name: 'Luna (Support)',
     title: 'IT TECH SUPPORT & QA',
@@ -222,7 +188,7 @@ Automated restock triggers when inventory falls below 20 units.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'marketing-nova',
+    id: 'joe',
     spriteId: 'joe',
     name: 'Nova (Marketing)',
     title: 'PRICING & MARKETING',
@@ -251,7 +217,7 @@ Automated restock triggers when inventory falls below 20 units.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'logistics-orion',
+    id: 'policy',
     spriteId: 'policy',
     name: 'Orion (Logistics)',
     title: 'LOGISTICS & COMPLIANCE',
@@ -280,7 +246,7 @@ Automated restock triggers when inventory falls below 20 units.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'procurement-mira',
+    id: 'procurement_mira',
     spriteId: 'joe',
     name: 'Mira (Procurement)',
     title: 'SUPPLIER & PROCUREMENT LEAD',
@@ -308,7 +274,7 @@ Automated restock triggers when inventory falls below 20 units.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'finance-vega',
+    id: 'finance_vega',
     spriteId: 'policy',
     name: 'Vega (Finance)',
     title: 'FINANCE & CASHFLOW CONTROLLER',
@@ -326,7 +292,7 @@ Automated restock triggers when inventory falls below 20 units.
     isLive: false,
     providerId: 'offline',
     isTeamLead: true,
-    subAgentIds: ['sales-max', 'procurement-mira'],
+    subAgentIds: ['xaugod', 'procurement_mira'],
     individualSkill: `# Finance Controller Protocol
 
 ## Routine
@@ -338,7 +304,7 @@ Automated restock triggers when inventory falls below 20 units.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'ecommerce-kai',
+    id: 'ecommerce_kai',
     spriteId: 'xaugod',
     name: 'Kai (E-Commerce)',
     title: 'ONLINE STORE & MARKETPLACE OPS',
@@ -366,7 +332,7 @@ Automated restock triggers when inventory falls below 20 units.
     sharedSkill: SHARED_SKILL
   },
   {
-    id: 'success-aria',
+    id: 'success_aria',
     spriteId: 'jing',
     name: 'Aria (Customer Success)',
     title: 'CUSTOMER SUCCESS & ACCOUNT CARE',

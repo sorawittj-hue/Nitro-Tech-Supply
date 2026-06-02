@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Agent } from '../data/agents';
 import { PixelCharacter } from './PixelCharacter';
-import { isCeoAgent } from '../lib/agentIdentity';
 
 interface WorkspaceProps {
   agents: Agent[];
@@ -221,7 +220,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         const isNapping = agent.status === 'Napping';
         const isThinking = agent.status === 'Thinking';
         const isIdle = agent.status === 'Idle';
-        const isCeo = isCeoAgent(agent);
+        const isCeo = agent.id === 'ceo_jay';
         const isTeamLead = Boolean(agent.isTeamLead);
         const subTaskCount = agent.activeTools?.length ?? 0;
         const walkState = agentWalkMap[agent.id] ?? { x: 0, y: 0, facing: 'right', moving: false };
@@ -389,7 +388,7 @@ function createWalkState(agent: Agent, previous?: AgentWalkState, isDragging = f
 }
 
 function getWalkRadius(agent: Agent): number {
-  if (isCeoAgent(agent)) return 10;
+  if (agent.id === 'ceo_jay') return 10;
   if (agent.status === 'Thinking') return 16;
   if (agent.status === 'Idle') return 8;
   return agent.isTeamLead ? 22 : 28;
