@@ -2705,6 +2705,56 @@ body {
   overflow-y: auto;
 }
 
+.business-record-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.business-record-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.business-record-main span,
+.business-record-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-record-main span {
+  color: var(--text-primary);
+}
+
+.business-record-main small {
+  color: var(--text-muted);
+}
+
+.business-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.business-record-actions .btn {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
 .business-ops-divider {
   height: 1px;
   background: var(--border-subtle);
@@ -2754,6 +2804,17 @@ body {
 
   .readiness-card {
     min-height: 0;
+  }
+
+  .business-record-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .business-record-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
 

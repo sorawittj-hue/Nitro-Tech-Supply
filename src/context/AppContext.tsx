@@ -60,10 +60,13 @@ export interface SupplierRecord {
   rating: number;
 }
 
+export type ApprovalStatus = 'not_required' | 'pending' | 'approved' | 'rejected';
+
 export interface QuoteRecord {
   id: string;
   customerId: string;
   status: 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
+  description?: string;
   totalValue: number;
   grossMargin: number;
   createdAt: string;
@@ -75,6 +78,7 @@ export interface InvoiceRecord {
   customerId: string;
   orderId?: string;
   status: 'Draft' | 'Issued' | 'Paid' | 'Overdue' | 'Cancelled';
+  description?: string;
   amount: number;
   paidAmount: number;
   dueDate: string;
@@ -94,9 +98,14 @@ export interface PurchaseOrderRecord {
   id: string;
   supplierId: string;
   status: 'Draft' | 'Approved' | 'Ordered' | 'Received' | 'Cancelled';
+  description?: string;
   totalCost: number;
   createdAt: string;
   expectedAt?: string;
+  approvalStatus?: ApprovalStatus;
+  approvalReason?: string;
+  approvedBy?: string;
+  approvedAt?: string;
 }
 
 export interface ShipmentRecord {

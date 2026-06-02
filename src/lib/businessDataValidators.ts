@@ -110,6 +110,7 @@ export function parseQuoteData(value: unknown): QuoteRecord[] {
       id: readString(quote, 'id', `quotes[${index}].id`),
       customerId: readString(quote, 'customerId', `quotes[${index}].customerId`),
       status: readEnum(quote, 'status', ['Draft', 'Sent', 'Accepted', 'Rejected', 'Expired'], `quotes[${index}].status`),
+      description: readOptionalString(quote, 'description', `quotes[${index}].description`),
       totalValue: readNumber(quote, 'totalValue', `quotes[${index}].totalValue`),
       grossMargin: readNumber(quote, 'grossMargin', `quotes[${index}].grossMargin`),
       createdAt: readString(quote, 'createdAt', `quotes[${index}].createdAt`),
@@ -127,6 +128,7 @@ export function parseInvoiceData(value: unknown): InvoiceRecord[] {
       customerId: readString(invoice, 'customerId', `invoices[${index}].customerId`),
       orderId: readOptionalString(invoice, 'orderId', `invoices[${index}].orderId`),
       status: readEnum(invoice, 'status', ['Draft', 'Issued', 'Paid', 'Overdue', 'Cancelled'], `invoices[${index}].status`),
+      description: readOptionalString(invoice, 'description', `invoices[${index}].description`),
       amount: readNumber(invoice, 'amount', `invoices[${index}].amount`),
       paidAmount: readNumber(invoice, 'paidAmount', `invoices[${index}].paidAmount`),
       dueDate: readString(invoice, 'dueDate', `invoices[${index}].dueDate`),
@@ -158,9 +160,14 @@ export function parsePurchaseOrderData(value: unknown): PurchaseOrderRecord[] {
       id: readString(purchaseOrder, 'id', `purchaseOrders[${index}].id`),
       supplierId: readString(purchaseOrder, 'supplierId', `purchaseOrders[${index}].supplierId`),
       status: readEnum(purchaseOrder, 'status', ['Draft', 'Approved', 'Ordered', 'Received', 'Cancelled'], `purchaseOrders[${index}].status`),
+      description: readOptionalString(purchaseOrder, 'description', `purchaseOrders[${index}].description`),
       totalCost: readNumber(purchaseOrder, 'totalCost', `purchaseOrders[${index}].totalCost`),
       createdAt: readString(purchaseOrder, 'createdAt', `purchaseOrders[${index}].createdAt`),
       expectedAt: readOptionalString(purchaseOrder, 'expectedAt', `purchaseOrders[${index}].expectedAt`),
+      approvalStatus: readOptionalEnum(purchaseOrder, 'approvalStatus', ['not_required', 'pending', 'approved', 'rejected'], `purchaseOrders[${index}].approvalStatus`),
+      approvalReason: readOptionalString(purchaseOrder, 'approvalReason', `purchaseOrders[${index}].approvalReason`),
+      approvedBy: readOptionalString(purchaseOrder, 'approvedBy', `purchaseOrders[${index}].approvedBy`),
+      approvedAt: readOptionalString(purchaseOrder, 'approvedAt', `purchaseOrders[${index}].approvedAt`),
     };
   });
 }
@@ -274,6 +281,20 @@ function readEnum<const T extends string>(
   const value = record[key];
   if (typeof value !== 'string' || !allowed.includes(value as T)) {
     throw new Error(`${label} must be one of: ${allowed.join(', ')}.`);
+  }
+  return value as T;
+}
+
+function readOptionalEnum<const T extends string>(
+  record: Record<string, unknown>,
+  key: string,
+  allowed: readonly T[],
+  label: string
+): T | undefined {
+  const value = record[key];
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string' || !allowed.includes(value as T)) {
+    throw new Error(`${label} must be one of: ${allowed.join(', ')} when provided.`);
   }
   return value as T;
 }

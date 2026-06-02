@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useApp } from '../context/AppContext';
-import type { BusinessCollection } from '../context/AppContext';
+import type { BusinessCollection, InvoiceRecord, PurchaseOrderRecord, QuoteRecord } from '../context/AppContext';
 import type { Agent } from '../data/agents';
+import { openInvoiceDocument, openPurchaseOrderDocument, openQuoteDocument } from '../lib/businessDocuments';
 
 type OpsTab = 'crm' | 'sales' | 'procurement' | 'service' | 'tasks';
 
@@ -14,6 +15,8 @@ const currencyFormatter = new Intl.NumberFormat('th-TH', {
   currency: 'THB',
   maximumFractionDigits: 0,
 });
+
+const CEO_APPROVAL_THRESHOLD_THB = 50_000;
 
 export function BusinessOps({ agents }: BusinessOpsProps) {
   const {
@@ -36,10 +39,10 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
   const [submitting, setSubmitting] = useState(false);
   const [customerForm, setCustomerForm] = useState({ name: '', type: 'wholesale', phone: '', email: '' });
   const [supplierForm, setSupplierForm] = useState({ name: '', paymentTerms: 'COD', leadTimeDays: 7, rating: 4 });
-  const [quoteForm, setQuoteForm] = useState({ customerId: '', totalValue: 0, grossMargin: 15, validUntil: '' });
-  const [invoiceForm, setInvoiceForm] = useState({ customerId: '', amount: 0, dueDate: nextDate(7) });
+  const [quoteForm, setQuoteForm] = useState({ customerId: '', description: '', totalValue: 0, grossMargin: 15, validUntil: '' });
+  const [invoiceForm, setInvoiceForm] = useState({ customerId: '', description: '', amount: 0, dueDate: nextDate(7) });
   const [paymentForm, setPaymentForm] = useState({ invoiceId: '', amount: 0, method: 'bank_transfer', reference: '' });
-  const [purchaseForm, setPurchaseForm] = useState({ supplierId: '', totalCost: 0, expectedAt: nextDate(14) });
+  const [purchaseForm, setPurchaseForm] = useState({ supplierId: '', description: '', totalCost: 0, expectedAt: nextDate(14) });
   const [claimForm, setClaimForm] = useState({ customerId: '', item: '', priority: 'medium' });
   const [taskForm, setTaskForm] = useState({ agentId: agents.find(agent => agent.id !== 'ceo_jay')?.id ?? '', title: '', priority: 'medium' });
 
@@ -131,11 +134,14 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
       id: makeId('quote'),
       customerId: selectedCustomerId,
       status: 'Draft',
+      description: quoteForm.description.trim() || 'IT hardware supply package',
       totalValue: Number(quoteForm.totalValue),
       grossMargin: Number(quoteForm.grossMargin),
       createdAt: new Date().toISOString(),
       validUntil: quoteForm.validUntil || undefined,
-    }, 'Quote draft created');
+    }, 'Quote draft created').then(created => {
+      if (created) setQuoteForm(prev => ({ ...prev, description: '', totalValue: 0, validUntil: '' }));
+    });
   };
 
   const createInvoice = () => {
@@ -151,11 +157,14 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
       id: makeId('inv'),
       customerId: selectedInvoiceCustomerId,
       status: 'Issued',
+      description: invoiceForm.description.trim() || 'IT hardware supply package',
       amount: Number(invoiceForm.amount),
       paidAmount: 0,
       dueDate: invoiceForm.dueDate,
       issuedAt: new Date().toISOString(),
-    }, 'Invoice issued');
+    }, 'Invoice issued').then(created => {
+      if (created) setInvoiceForm(prev => ({ ...prev, description: '', amount: 0, dueDate: nextDate(7) }));
+    });
   };
 
   const createPayment = async () => {
@@ -197,7 +206,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
     }
   };
 
-  const createPurchaseOrder = () => {
+  const createPurchaseOrder = async () => {
     if (!selectedSupplierId) {
       addToast('warning', 'Create a supplier before creating a PO');
       return;
@@ -206,14 +215,48 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
       addToast('warning', 'PO total cost must be greater than zero');
       return;
     }
-    void submit('purchaseOrders', {
-      id: makeId('po'),
-      supplierId: selectedSupplierId,
-      status: 'Draft',
-      totalCost: Number(purchaseForm.totalCost),
-      createdAt: new Date().toISOString(),
-      expectedAt: purchaseForm.expectedAt || undefined,
-    }, 'Purchase order draft created');
+
+    const totalCost = Number(purchaseForm.totalCost);
+    const requiresApproval = totalCost > CEO_APPROVAL_THRESHOLD_THB;
+    const purchaseOrderId = makeId('po');
+
+    try {
+      setSubmitting(true);
+      await createBusinessRecord('purchaseOrders', {
+        id: purchaseOrderId,
+        supplierId: selectedSupplierId,
+        status: 'Draft',
+        description: purchaseForm.description.trim() || 'IT hardware procurement order',
+        totalCost,
+        createdAt: new Date().toISOString(),
+        expectedAt: purchaseForm.expectedAt || undefined,
+        approvalStatus: requiresApproval ? 'pending' : 'not_required',
+        approvalReason: requiresApproval
+          ? `Purchase exceeds ${currencyFormatter.format(CEO_APPROVAL_THRESHOLD_THB)} CEO approval threshold.`
+          : undefined,
+      });
+
+      if (requiresApproval) {
+        await createBusinessRecord('agentTasks', {
+          id: makeId('task'),
+          agentId: 'ceo_jay',
+          title: `Approve purchase order ${purchaseOrderId} (${currencyFormatter.format(totalCost)})`,
+          status: 'todo',
+          priority: 'high',
+          source: 'system',
+          createdAt: new Date().toISOString(),
+        });
+        addToast('warning', 'PO created and routed to CEO approval');
+      } else {
+        addToast('success', 'Purchase order draft created');
+      }
+      setPurchaseForm(prev => ({ ...prev, description: '', totalCost: 0, expectedAt: nextDate(14) }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      addToast('error', message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const createClaim = () => {
@@ -250,6 +293,44 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
     }, 'Agent task created').then(created => {
       if (created) setTaskForm(prev => ({ ...prev, title: '' }));
     });
+  };
+
+  const openQuote = (quote: QuoteRecord) => {
+    const result = openQuoteDocument(quote, customers.find(customer => customer.id === quote.customerId));
+    addToast(result.ok ? 'info' : 'error', result.message);
+  };
+
+  const openInvoice = (invoice: InvoiceRecord) => {
+    const result = openInvoiceDocument(invoice, customers.find(customer => customer.id === invoice.customerId));
+    addToast(result.ok ? 'info' : 'error', result.message);
+  };
+
+  const openPurchaseOrder = (purchaseOrder: PurchaseOrderRecord) => {
+    const result = openPurchaseOrderDocument(purchaseOrder, suppliers.find(supplier => supplier.id === purchaseOrder.supplierId));
+    addToast(result.ok ? 'info' : 'error', result.message);
+  };
+
+  const approvePurchaseOrder = async (purchaseOrder: PurchaseOrderRecord) => {
+    if (writesLocked) {
+      addToast('warning', 'Add the DATA WRITE TOKEN in Settings before approving a purchase order');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await updateBusinessRecord('purchaseOrders', purchaseOrder.id, {
+        status: 'Approved',
+        approvalStatus: 'approved',
+        approvedBy: 'CEO Jay',
+        approvedAt: new Date().toISOString(),
+      });
+      addToast('success', `Approved ${purchaseOrder.id}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      addToast('error', message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -298,6 +379,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
               <option value="">Select customer</option>
               {customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
             </select>
+            <input className="form-input" value={quoteForm.description} onChange={event => setQuoteForm(prev => ({ ...prev, description: event.target.value }))} placeholder="Quote item / bundle description" />
             <input className="form-input" type="number" min="0" value={quoteForm.totalValue} onChange={event => setQuoteForm(prev => ({ ...prev, totalValue: Number(event.target.value) }))} placeholder="Quote value THB" />
             <input className="form-input" type="number" min="0" value={quoteForm.grossMargin} onChange={event => setQuoteForm(prev => ({ ...prev, grossMargin: Number(event.target.value) }))} placeholder="Gross margin %" />
             <input className="form-input" type="date" value={quoteForm.validUntil} onChange={event => setQuoteForm(prev => ({ ...prev, validUntil: event.target.value }))} />
@@ -307,6 +389,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
               <option value="">Select customer</option>
               {customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
             </select>
+            <input className="form-input" value={invoiceForm.description} onChange={event => setInvoiceForm(prev => ({ ...prev, description: event.target.value }))} placeholder="Invoice item / order description" />
             <input className="form-input" type="number" min="0" value={invoiceForm.amount} onChange={event => setInvoiceForm(prev => ({ ...prev, amount: Number(event.target.value) }))} placeholder="Invoice amount THB" />
             <input className="form-input" type="date" value={invoiceForm.dueDate} onChange={event => setInvoiceForm(prev => ({ ...prev, dueDate: event.target.value }))} />
             <button type="button" className="btn btn-ghost" onClick={createInvoice} disabled={submitting || writesLocked}>Issue Invoice</button>
@@ -329,10 +412,24 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
             <input className="form-input" value={paymentForm.reference} onChange={event => setPaymentForm(prev => ({ ...prev, reference: event.target.value }))} placeholder="Payment reference" />
             <button type="button" className="btn btn-ghost" onClick={() => void createPayment()} disabled={submitting || writesLocked}>Record Payment</button>
           </OpsForm>
-          <OpsList title="Sales Documents" items={[
-            ...quotes.map(quote => `${quote.id} - ${quote.status} - ${currencyFormatter.format(quote.totalValue)} - ${quote.grossMargin}% GM`),
-            ...invoices.map(invoice => `${invoice.id} - ${invoice.status} - ${currencyFormatter.format(Math.max(invoice.amount - invoice.paidAmount, 0))} due`),
-            ...payments.map(payment => `${payment.id} - ${payment.method} - ${currencyFormatter.format(payment.amount)}`),
+          <OpsRecordList title="Sales Documents" items={[
+            ...quotes.map(quote => ({
+              id: quote.id,
+              summary: `${quote.id} - ${quote.status} - ${currencyFormatter.format(quote.totalValue)} - ${quote.grossMargin}% GM`,
+              meta: quote.description || 'Quote document',
+              actions: <button type="button" className="btn btn-ghost" onClick={() => openQuote(quote)}>Print</button>,
+            })),
+            ...invoices.map(invoice => ({
+              id: invoice.id,
+              summary: `${invoice.id} - ${invoice.status} - ${currencyFormatter.format(Math.max(invoice.amount - invoice.paidAmount, 0))} due`,
+              meta: invoice.description || 'Invoice document',
+              actions: <button type="button" className="btn btn-ghost" onClick={() => openInvoice(invoice)}>Print</button>,
+            })),
+            ...payments.map(payment => ({
+              id: payment.id,
+              summary: `${payment.id} - ${payment.method} - ${currencyFormatter.format(payment.amount)}`,
+              meta: `Invoice ${payment.invoiceId}`,
+            })),
           ]} empty="No quotes, invoices, or payments yet." />
         </section>
       )}
@@ -350,13 +447,37 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
               <option value="">Select supplier</option>
               {suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
             </select>
+            <input className="form-input" value={purchaseForm.description} onChange={event => setPurchaseForm(prev => ({ ...prev, description: event.target.value }))} placeholder="PO item / supplier order description" />
             <input className="form-input" type="number" min="0" value={purchaseForm.totalCost} onChange={event => setPurchaseForm(prev => ({ ...prev, totalCost: Number(event.target.value) }))} placeholder="PO total cost THB" />
             <input className="form-input" type="date" value={purchaseForm.expectedAt} onChange={event => setPurchaseForm(prev => ({ ...prev, expectedAt: event.target.value }))} />
-            <button type="button" className="btn btn-ghost" onClick={createPurchaseOrder} disabled={submitting || writesLocked}>Create PO Draft</button>
+            {Number(purchaseForm.totalCost) > CEO_APPROVAL_THRESHOLD_THB && (
+              <div className="form-error">
+                This PO exceeds {currencyFormatter.format(CEO_APPROVAL_THRESHOLD_THB)} and will require CEO approval.
+              </div>
+            )}
+            <button type="button" className="btn btn-ghost" onClick={() => void createPurchaseOrder()} disabled={submitting || writesLocked}>Create PO Draft</button>
           </OpsForm>
-          <OpsList title="Supply Pipeline" items={[
-            ...suppliers.map(supplier => `${supplier.name} - ${supplier.paymentTerms} - ${supplier.leadTimeDays}d lead`),
-            ...purchaseOrders.map(order => `${order.id} - ${order.status} - ${currencyFormatter.format(order.totalCost)}`),
+          <OpsRecordList title="Supply Pipeline" items={[
+            ...suppliers.map(supplier => ({
+              id: supplier.id,
+              summary: `${supplier.name} - ${supplier.paymentTerms} - ${supplier.leadTimeDays}d lead`,
+              meta: `Rating ${supplier.rating}/5`,
+            })),
+            ...purchaseOrders.map(order => ({
+              id: order.id,
+              summary: `${order.id} - ${order.status} - ${currencyFormatter.format(order.totalCost)}`,
+              meta: `${order.description || 'Purchase order'} - Approval: ${order.approvalStatus || 'not_required'}`,
+              actions: (
+                <>
+                  <button type="button" className="btn btn-ghost" onClick={() => openPurchaseOrder(order)}>Print</button>
+                  {order.approvalStatus === 'pending' && (
+                    <button type="button" className="btn btn-primary" onClick={() => void approvePurchaseOrder(order)} disabled={submitting || writesLocked}>
+                      Approve
+                    </button>
+                  )}
+                </>
+              ),
+            })),
           ]} empty="No suppliers or purchase orders yet." />
         </section>
       )}
@@ -438,6 +559,37 @@ function OpsList({ title, items, empty }: { title: string; items: string[]; empt
         ) : items.slice(0, 12).map(item => (
           <div key={item} className="compact-row">
             <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface OpsRecordListItem {
+  id: string;
+  summary: string;
+  meta?: string;
+  actions?: ReactNode;
+}
+
+function OpsRecordList({ title, items, empty }: { title: string; items: OpsRecordListItem[]; empty: string }) {
+  return (
+    <div className="business-ops-card">
+      <div className="panel-card-header">
+        <span className="panel-card-title">{title}</span>
+        <span className="badge badge-info">{items.length}</span>
+      </div>
+      <div className="business-ops-list">
+        {items.length === 0 ? (
+          <span className="muted-line">{empty}</span>
+        ) : items.slice(0, 12).map(item => (
+          <div key={item.id} className="business-record-row">
+            <div className="business-record-main">
+              <span>{item.summary}</span>
+              {item.meta && <small>{item.meta}</small>}
+            </div>
+            {item.actions && <div className="business-record-actions">{item.actions}</div>}
           </div>
         ))}
       </div>
