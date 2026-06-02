@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import type { BusinessCollection, InvoiceRecord, PurchaseOrderRecord, QuoteRecord } from '../context/AppContext';
 import type { Agent } from '../data/agents';
 import { openInvoiceDocument, openPurchaseOrderDocument, openQuoteDocument } from '../lib/businessDocuments';
+import { isCeoAgent } from '../lib/agentIdentity';
 
 type OpsTab = 'crm' | 'sales' | 'procurement' | 'service' | 'tasks';
 
@@ -619,8 +620,4 @@ function tabLabel(tab: OpsTab): string {
 
 function firstAssignableAgentId(agents: Agent[]): string {
   return agents.find(agent => !isCeoAgent(agent))?.id ?? '';
-}
-
-function isCeoAgent(agent: Agent): boolean {
-  return agent.id === 'ceo-jay-command' || agent.sessionId === 'ceo-jay-command' || agent.authorityLevel === 'Owner';
 }

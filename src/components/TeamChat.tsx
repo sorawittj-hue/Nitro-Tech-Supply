@@ -5,6 +5,7 @@ import { createChatProvider } from '../providers/providerFactory';
 import { TelegramSyncService } from '../providers/telegramSyncService';
 import type { ChatMessage } from '../providers/types';
 import { transport } from '../transport';
+import { isCeoAgent } from '../lib/agentIdentity';
 
 interface TeamChatProps {
   agents: Agent[];
@@ -244,8 +245,4 @@ function renderProviderStatus(provider: string, hermesConnected: boolean): strin
   if (provider === 'hermes') return hermesConnected ? '(HERMES LIVE 🟢)' : '(HERMES OFFLINE 🔴)';
   if (provider === 'mimo') return '(MIMO AI)';
   return '(NO PROVIDER)';
-}
-
-function isCeoAgent(agent: Agent): boolean {
-  return agent.id === 'ceo-jay-command' || agent.sessionId === 'ceo-jay-command' || agent.authorityLevel === 'Owner';
 }
