@@ -115,8 +115,11 @@ export interface WakeAgentMsg extends BaseMessage {
 export interface AssignTaskMsg extends BaseMessage {
   type: 'agent.task.assign';
   agentId: string;
+  taskId?: string;
   title: string;
   detail?: string;
+  priority?: CompanyAgentTask['priority'];
+  source?: CompanyAgentTask['source'];
 }
 
 export interface UpdateSkillMsg extends BaseMessage {

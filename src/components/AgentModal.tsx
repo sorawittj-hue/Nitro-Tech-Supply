@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Agent } from '../data/agents';
 import { PixelCharacter } from './PixelCharacter';
 import { AgentTaskManager } from './AgentTaskManager';
+import { transport } from '../transport';
 
 interface AgentModalProps {
   agent: Agent;
@@ -18,6 +19,13 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
 
   const handleSave = () => {
     onUpdateAgent({ ...agent, individualSkill, sharedSkill, status });
+    transport.send({
+      type: 'agent.skill.update',
+      agentId: agent.id,
+      individualSkill,
+      sharedSkill,
+      timestamp: Date.now(),
+    });
     setIsSaved(true);
     void import('canvas-confetti').then(module => module.default({
       particleCount: 40,
@@ -33,6 +41,11 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
   const handleWakeUp = () => {
     setStatus('Working');
     onUpdateAgent({ ...agent, status: 'Working' });
+    transport.send({
+      type: 'agent.wake',
+      agentId: agent.id,
+      timestamp: Date.now(),
+    });
     try {
       const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextClass) return;

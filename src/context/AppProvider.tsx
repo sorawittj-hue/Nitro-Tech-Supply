@@ -5,6 +5,7 @@ import type { ConsoleLog } from '../components/SystemConsole';
 import { testHermesConnection as testHermesProviderConnection } from '../providers/providerFactory';
 import type { ChatProviderConfig, ChatProviderId } from '../providers/types';
 import { useAgentEvents } from '../hooks/useAgentEvents';
+import { transport } from '../transport';
 import {
   parseAffiliateData,
   parseClaimData,
@@ -510,6 +511,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const handleWakeAgent = useCallback((agent: Agent) => {
     handleUpdateAgent({ ...agent, status: 'Working' });
+    transport.send({
+      type: 'agent.wake',
+      agentId: agent.id,
+      timestamp: Date.now(),
+    });
   }, [handleUpdateAgent]);
 
   const togglePanel = useCallback((panel: string) => {

@@ -4,6 +4,7 @@ import type { BusinessCollection, InvoiceRecord, PurchaseOrderRecord, QuoteRecor
 import type { Agent } from '../data/agents';
 import { openInvoiceDocument, openPurchaseOrderDocument, openQuoteDocument } from '../lib/businessDocuments';
 import { isCeoAgent } from '../lib/agentIdentity';
+import { transport } from '../transport';
 
 type OpsTab = 'crm' | 'sales' | 'procurement' | 'service' | 'tasks';
 
@@ -240,14 +241,26 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
       });
 
       if (requiresApproval) {
+        const approvalTaskId = makeId('task');
+        const approvalTitle = `Approve purchase order ${purchaseOrderId} (${currencyFormatter.format(totalCost)})`;
         await createBusinessRecord('agentTasks', {
-          id: makeId('task'),
+          id: approvalTaskId,
           agentId: ceoAgentId,
-          title: `Approve purchase order ${purchaseOrderId} (${currencyFormatter.format(totalCost)})`,
+          title: approvalTitle,
           status: 'todo',
           priority: 'high',
           source: 'system',
           createdAt: new Date().toISOString(),
+        });
+        transport.send({
+          type: 'agent.task.assign',
+          agentId: ceoAgentId,
+          taskId: approvalTaskId,
+          title: approvalTitle,
+          detail: `Purchase order ${purchaseOrderId} exceeds CEO approval threshold ${currencyFormatter.format(CEO_APPROVAL_THRESHOLD_THB)}.`,
+          priority: 'high',
+          source: 'system',
+          timestamp: Date.now(),
         });
         addToast('warning', 'PO created and routed to CEO approval');
       } else {
@@ -285,16 +298,31 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
       addToast('warning', 'Agent and task title are required');
       return;
     }
+    const taskId = makeId('task');
+    const title = taskForm.title.trim();
+    const priority = taskForm.priority as 'low' | 'medium' | 'high';
     void submit('agentTasks', {
-      id: makeId('task'),
+      id: taskId,
       agentId,
-      title: taskForm.title.trim(),
+      title,
       status: 'todo',
-      priority: taskForm.priority,
+      priority,
       source: 'ceo',
       createdAt: new Date().toISOString(),
     }, 'Agent task created').then(created => {
-      if (created) setTaskForm(prev => ({ ...prev, title: '' }));
+      if (created) {
+        transport.send({
+          type: 'agent.task.assign',
+          agentId,
+          taskId,
+          title,
+          detail: `Priority: ${priority}. Created from Business Ops.`,
+          priority,
+          source: 'ceo',
+          timestamp: Date.now(),
+        });
+        setTaskForm(prev => ({ ...prev, title: '' }));
+      }
     });
   };
 

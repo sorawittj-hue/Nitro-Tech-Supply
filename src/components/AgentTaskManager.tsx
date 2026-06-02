@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Agent } from '../data/agents';
 import { useApp } from '../context/AppContext';
+import { transport } from '../transport';
 import ConfirmationDialog from './ConfirmationDialog';
 
 interface Task {
@@ -28,6 +29,16 @@ export function AgentTaskManager({ agent }: { agent: Agent }) {
     if (!newTitle.trim()) return;
     const t: Task = { id: Date.now().toString(), title: newTitle.trim(), status: 'todo', priority: newPriority, createdAt: new Date().toISOString() };
     persist([t, ...tasks]);
+    transport.send({
+      type: 'agent.task.assign',
+      agentId: agent.id,
+      taskId: t.id,
+      title: t.title,
+      detail: `Priority: ${t.priority}. Created from Nitro agent task manager.`,
+      priority: t.priority,
+      source: 'ceo',
+      timestamp: Date.now(),
+    });
     setNewTitle('');
     addLog('INFO', `📋 มอบหมายงานให้ ${agent.name}: "${t.title}"`);
     addToast('info', `ส่งงานไป ${agent.name}`);
