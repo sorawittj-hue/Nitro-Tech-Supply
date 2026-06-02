@@ -7,6 +7,7 @@
     "dev": "vite",
     "backend": "json-server --watch db.json --port 3030",
     "proxy": "node server/nitro-api-proxy.mjs",
+    "backup:data": "node server/nitro-data-backup.mjs",
     "dev:all": "concurrently \"npm run dev\" \"npm run backend\"",
     "dev:full": "concurrently \"npm run dev\" \"npm run backend\" \"npm run proxy\"",
     "build": "tsc -b && vite build",
