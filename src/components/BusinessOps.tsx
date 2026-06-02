@@ -26,6 +26,8 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
     shipments,
     claims,
     companyAgentTasks,
+    dataWriteToken,
+    nitroHealth,
     createBusinessRecord,
     updateBusinessRecord,
     addToast,
@@ -48,6 +50,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
   const selectedPaymentInvoice = invoices.find(invoice => invoice.id === selectedPaymentInvoiceId);
   const selectedSupplierId = purchaseForm.supplierId || suppliers[0]?.id || '';
   const selectedClaimCustomerId = claimForm.customerId || customers[0]?.id || '';
+  const writesLocked = Boolean(nitroHealth?.dataWriteAuthRequired && !dataWriteToken);
 
   const metrics = useMemo(() => {
     const openInvoices = invoices.filter(invoice => invoice.status !== 'Paid' && invoice.status !== 'Cancelled');
@@ -258,6 +261,12 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
         <SummaryCard label="Ops Risk" value={(metrics.activeClaims + metrics.activeTasks).toString()} detail={`${metrics.activeClaims} claims / ${metrics.activeTasks} tasks`} />
       </div>
 
+      {writesLocked && (
+        <div className="form-error">
+          Nitro data writes are protected. Add the DATA WRITE TOKEN in Settings before creating or updating business records.
+        </div>
+      )}
+
       <div className="business-ops-tabs">
         {(['crm', 'sales', 'procurement', 'service', 'tasks'] as const).map(tab => (
           <button key={tab} type="button" className={`business-ops-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
@@ -276,7 +285,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
             </select>
             <input className="form-input" value={customerForm.phone} onChange={event => setCustomerForm(prev => ({ ...prev, phone: event.target.value }))} placeholder="Phone" />
             <input className="form-input" value={customerForm.email} onChange={event => setCustomerForm(prev => ({ ...prev, email: event.target.value }))} placeholder="Email" />
-            <button type="button" className="btn btn-primary" onClick={createCustomer} disabled={submitting}>Create Customer</button>
+            <button type="button" className="btn btn-primary" onClick={createCustomer} disabled={submitting || writesLocked}>Create Customer</button>
           </OpsForm>
           <OpsList title="Customer Pipeline" items={customers.map(customer => `${customer.name} - ${customer.type.toUpperCase()} - ${customer.status}`)} empty="No customers yet." />
         </section>
@@ -292,7 +301,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
             <input className="form-input" type="number" min="0" value={quoteForm.totalValue} onChange={event => setQuoteForm(prev => ({ ...prev, totalValue: Number(event.target.value) }))} placeholder="Quote value THB" />
             <input className="form-input" type="number" min="0" value={quoteForm.grossMargin} onChange={event => setQuoteForm(prev => ({ ...prev, grossMargin: Number(event.target.value) }))} placeholder="Gross margin %" />
             <input className="form-input" type="date" value={quoteForm.validUntil} onChange={event => setQuoteForm(prev => ({ ...prev, validUntil: event.target.value }))} />
-            <button type="button" className="btn btn-primary" onClick={createQuote} disabled={submitting}>Create Quote Draft</button>
+            <button type="button" className="btn btn-primary" onClick={createQuote} disabled={submitting || writesLocked}>Create Quote Draft</button>
             <div className="business-ops-divider" />
             <select className="form-input" value={selectedInvoiceCustomerId} onChange={event => setInvoiceForm(prev => ({ ...prev, customerId: event.target.value }))}>
               <option value="">Select customer</option>
@@ -300,7 +309,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
             </select>
             <input className="form-input" type="number" min="0" value={invoiceForm.amount} onChange={event => setInvoiceForm(prev => ({ ...prev, amount: Number(event.target.value) }))} placeholder="Invoice amount THB" />
             <input className="form-input" type="date" value={invoiceForm.dueDate} onChange={event => setInvoiceForm(prev => ({ ...prev, dueDate: event.target.value }))} />
-            <button type="button" className="btn btn-ghost" onClick={createInvoice} disabled={submitting}>Issue Invoice</button>
+            <button type="button" className="btn btn-ghost" onClick={createInvoice} disabled={submitting || writesLocked}>Issue Invoice</button>
             <div className="business-ops-divider" />
             <select className="form-input" value={selectedPaymentInvoiceId} onChange={event => setPaymentForm(prev => ({ ...prev, invoiceId: event.target.value }))}>
               <option value="">Select invoice</option>
@@ -318,7 +327,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
               <option value="other">Other</option>
             </select>
             <input className="form-input" value={paymentForm.reference} onChange={event => setPaymentForm(prev => ({ ...prev, reference: event.target.value }))} placeholder="Payment reference" />
-            <button type="button" className="btn btn-ghost" onClick={() => void createPayment()} disabled={submitting}>Record Payment</button>
+            <button type="button" className="btn btn-ghost" onClick={() => void createPayment()} disabled={submitting || writesLocked}>Record Payment</button>
           </OpsForm>
           <OpsList title="Sales Documents" items={[
             ...quotes.map(quote => `${quote.id} - ${quote.status} - ${currencyFormatter.format(quote.totalValue)} - ${quote.grossMargin}% GM`),
@@ -335,7 +344,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
             <input className="form-input" value={supplierForm.paymentTerms} onChange={event => setSupplierForm(prev => ({ ...prev, paymentTerms: event.target.value }))} placeholder="Payment terms" />
             <input className="form-input" type="number" min="0" value={supplierForm.leadTimeDays} onChange={event => setSupplierForm(prev => ({ ...prev, leadTimeDays: Number(event.target.value) }))} placeholder="Lead time days" />
             <input className="form-input" type="number" min="0" max="5" value={supplierForm.rating} onChange={event => setSupplierForm(prev => ({ ...prev, rating: Number(event.target.value) }))} placeholder="Rating 0-5" />
-            <button type="button" className="btn btn-primary" onClick={createSupplier} disabled={submitting}>Create Supplier</button>
+            <button type="button" className="btn btn-primary" onClick={createSupplier} disabled={submitting || writesLocked}>Create Supplier</button>
             <div className="business-ops-divider" />
             <select className="form-input" value={selectedSupplierId} onChange={event => setPurchaseForm(prev => ({ ...prev, supplierId: event.target.value }))}>
               <option value="">Select supplier</option>
@@ -343,7 +352,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
             </select>
             <input className="form-input" type="number" min="0" value={purchaseForm.totalCost} onChange={event => setPurchaseForm(prev => ({ ...prev, totalCost: Number(event.target.value) }))} placeholder="PO total cost THB" />
             <input className="form-input" type="date" value={purchaseForm.expectedAt} onChange={event => setPurchaseForm(prev => ({ ...prev, expectedAt: event.target.value }))} />
-            <button type="button" className="btn btn-ghost" onClick={createPurchaseOrder} disabled={submitting}>Create PO Draft</button>
+            <button type="button" className="btn btn-ghost" onClick={createPurchaseOrder} disabled={submitting || writesLocked}>Create PO Draft</button>
           </OpsForm>
           <OpsList title="Supply Pipeline" items={[
             ...suppliers.map(supplier => `${supplier.name} - ${supplier.paymentTerms} - ${supplier.leadTimeDays}d lead`),
@@ -365,7 +374,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
               <option value="medium">Medium</option>
               <option value="high">High</option>
             </select>
-            <button type="button" className="btn btn-primary" onClick={createClaim} disabled={submitting}>Open Claim</button>
+            <button type="button" className="btn btn-primary" onClick={createClaim} disabled={submitting || writesLocked}>Open Claim</button>
           </OpsForm>
           <OpsList title="Service Desk" items={[
             ...claims.map(claim => `${claim.id} - ${claim.priority.toUpperCase()} - ${claim.status} - ${claim.item}`),
@@ -386,7 +395,7 @@ export function BusinessOps({ agents }: BusinessOpsProps) {
               <option value="medium">Medium</option>
               <option value="high">High</option>
             </select>
-            <button type="button" className="btn btn-primary" onClick={createTask} disabled={submitting}>Create Agent Task</button>
+            <button type="button" className="btn btn-primary" onClick={createTask} disabled={submitting || writesLocked}>Create Agent Task</button>
           </OpsForm>
           <OpsList title="Company Agent Tasks" items={companyAgentTasks.map(task => `${task.id} - ${task.agentId} - ${task.priority.toUpperCase()} - ${task.status} - ${task.title}`)} empty="No company tasks yet." />
         </section>

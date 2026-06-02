@@ -58,10 +58,12 @@ export default function App() {
     lastAgentEventAt,
     debugMode,
     dataWriteToken,
+    nitroHealth,
     setChatProvider,
     setHermesConfig,
     setDebugMode,
     setDataWriteToken,
+    refreshNitroHealth,
     testHermesConnection,
   } = app;
 
@@ -412,13 +414,25 @@ export default function App() {
                   <div className="panel-card">
                     <div className="panel-card-header">
                       <span className="panel-card-title">NITRO WRITE ACCESS</span>
-                      <span className={`badge ${dataWriteToken ? 'badge-success' : 'badge-warning'}`}>
-                        {dataWriteToken ? 'SESSION TOKEN SET' : 'READ ONLY'}
+                      <span className={`badge ${nitroHealth?.dataWriteAuthRequired ? 'badge-success' : 'badge-danger'}`}>
+                        {nitroHealth?.dataWriteAuthRequired ? 'WRITE PROTECTED' : 'UNPROTECTED'}
                       </span>
                     </div>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
                       Business writes use X-Nitro-Write-Token. The token is kept only in this browser session and is not saved to git or localStorage.
                     </p>
+                    <div className="compact-row" style={{ marginBottom: '8px' }}>
+                      <span>Server token configured</span>
+                      <strong>{nitroHealth?.dataWriteAuthConfigured ? 'YES' : 'NO'}</strong>
+                    </div>
+                    <div className="compact-row" style={{ marginBottom: '8px' }}>
+                      <span>Server requires token</span>
+                      <strong>{nitroHealth?.dataWriteAuthRequired ? 'YES' : 'NO'}</strong>
+                    </div>
+                    <div className="compact-row" style={{ marginBottom: '12px' }}>
+                      <span>Audit log</span>
+                      <strong>{nitroHealth?.auditLogEnabled ? 'ON' : 'UNKNOWN'}</strong>
+                    </div>
                     <div style={{ marginBottom: '12px' }}>
                       <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>DATA WRITE TOKEN</label>
                       <input
@@ -430,7 +444,10 @@ export default function App() {
                         style={{ width: '100%', marginTop: '4px' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <button type="button" className="btn btn-ghost" onClick={() => void refreshNitroHealth()}>
+                        Refresh Security
+                      </button>
                       <button type="button" className="btn btn-ghost" onClick={() => setDataWriteToken('')}>
                         Clear Token
                       </button>

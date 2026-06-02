@@ -142,6 +142,16 @@ export interface ToastItem {
   message: string;
 }
 
+export interface NitroHealthStatus {
+  status: string;
+  service: string;
+  dataWriteAuthConfigured: boolean;
+  dataWriteAuthRequired: boolean;
+  dataWriteAuthExplicitlyRequired?: boolean;
+  auditLogEnabled?: boolean;
+  checkedAt: string;
+}
+
 export interface AppState {
   agents: Agent[];
   selectedAgent: Agent | null;
@@ -179,6 +189,7 @@ export interface AppState {
   lastAgentEventAt: number | null;
   debugMode: boolean;
   dataWriteToken: string;
+  nitroHealth: NitroHealthStatus | null;
 }
 
 export type BusinessCollection =
@@ -220,6 +231,7 @@ export interface AppContextValue extends AppState {
   addToast: (type: ToastItem['type'], message: string) => void;
   removeToast: (id: string) => void;
   refreshAllData: () => Promise<void>;
+  refreshNitroHealth: () => Promise<NitroHealthStatus | null>;
   adjustStock: (item: InventoryItem, delta: number) => Promise<void>;
   saveInventoryItem: (item: Omit<InventoryItem, 'id'> & { id?: string }) => Promise<void>;
   deleteInventoryItem: (id: string) => Promise<void>;

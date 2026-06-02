@@ -13,6 +13,7 @@ import {
   parseFinanceData,
   parseInventoryData,
   parseInvoiceData,
+  parseNitroHealthStatus,
   parseOrderData,
   parsePaymentData,
   parsePurchaseOrderData,
@@ -26,6 +27,7 @@ import {
   type OrderItem, 
   type AffiliateData, 
   type FinanceData, 
+  type NitroHealthStatus,
   type CustomerRecord,
   type SupplierRecord,
   type QuoteRecord,
@@ -58,6 +60,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [hermesConnected, setHermesConnected] = useState<boolean>(false);
   const [debugMode, setDebugMode] = useState<boolean>(() => localStorage.getItem('nitro-tech:debug-mode') === 'true');
   const [dataWriteToken, setDataWriteToken] = useState<string>(() => sessionStorage.getItem('nitro-tech:data-write-token') || '');
+  const [nitroHealth, setNitroHealth] = useState<NitroHealthStatus | null>(null);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [retryCount, setRetryCount] = useState<number>(0);
@@ -131,6 +134,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }), [addLog]);
 
   const { isConnected: transportConnected, lastEventAt: lastAgentEventAt } = useAgentEvents(eventOptions);
+
+  const refreshNitroHealth = useCallback(async (): Promise<NitroHealthStatus | null> => {
+    try {
+      const health = await fetchJson(`${apiBase}/health`, parseNitroHealthStatus, 'Nitro health');
+      setNitroHealth(health);
+      return health;
+    } catch (error) {
+      console.warn('Failed to fetch Nitro health:', error);
+      setNitroHealth(null);
+      return null;
+    }
+  }, [apiBase]);
 
   // Fetch all endpoints with defensive checks to avoid SyntaxError for HTML responses
   const refreshAllData = useCallback(async () => {
@@ -213,11 +228,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const load = async () => {
       if (active) {
         await refreshAllData();
+        await refreshNitroHealth();
       }
     };
     load();
     return () => { active = false; };
-  }, [refreshAllData]);
+  }, [refreshAllData, refreshNitroHealth]);
+
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      if (active) {
+        await refreshNitroHealth();
+      }
+    };
+    void check();
+    const interval = setInterval(() => {
+      void check();
+    }, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [refreshNitroHealth]);
 
   // Inventory actions with offline local handling
   const adjustStock = useCallback(async (item: InventoryItem, delta: number) => {
@@ -519,6 +552,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     lastAgentEventAt,
     debugMode,
     dataWriteToken,
+    nitroHealth,
     setAgents,
     setSelectedAgent,
     setLogs,
@@ -544,6 +578,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addToast,
     removeToast,
     refreshAllData,
+    refreshNitroHealth,
     adjustStock,
     saveInventoryItem,
     deleteInventoryItem,

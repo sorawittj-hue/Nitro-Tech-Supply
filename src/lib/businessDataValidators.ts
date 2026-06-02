@@ -6,6 +6,7 @@ import type {
   FinanceData,
   InventoryItem,
   InvoiceRecord,
+  NitroHealthStatus,
   OrderItem,
   PaymentRecord,
   PurchaseOrderRecord,
@@ -212,9 +213,35 @@ export function parseCompanyAgentTaskData(value: unknown): CompanyAgentTask[] {
   });
 }
 
+export function parseNitroHealthStatus(value: unknown): NitroHealthStatus {
+  if (!isRecord(value)) throw new Error('Nitro health payload must be an object.');
+  return {
+    status: readString(value, 'status', 'health.status'),
+    service: readString(value, 'service', 'health.service'),
+    dataWriteAuthConfigured: readBoolean(value, 'dataWriteAuthConfigured', 'health.dataWriteAuthConfigured'),
+    dataWriteAuthRequired: readBoolean(value, 'dataWriteAuthRequired', 'health.dataWriteAuthRequired'),
+    dataWriteAuthExplicitlyRequired: readOptionalBoolean(value, 'dataWriteAuthExplicitlyRequired', 'health.dataWriteAuthExplicitlyRequired'),
+    auditLogEnabled: readOptionalBoolean(value, 'auditLogEnabled', 'health.auditLogEnabled'),
+    checkedAt: new Date().toISOString(),
+  };
+}
+
 function readString(record: Record<string, unknown>, key: string, label: string): string {
   const value = record[key];
   if (typeof value !== 'string') throw new Error(`${label} must be a string.`);
+  return value;
+}
+
+function readBoolean(record: Record<string, unknown>, key: string, label: string): boolean {
+  const value = record[key];
+  if (typeof value !== 'boolean') throw new Error(`${label} must be a boolean.`);
+  return value;
+}
+
+function readOptionalBoolean(record: Record<string, unknown>, key: string, label: string): boolean | undefined {
+  const value = record[key];
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'boolean') throw new Error(`${label} must be a boolean when provided.`);
   return value;
 }
 

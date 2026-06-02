@@ -18,6 +18,7 @@ const MIMO_API_KEY = process.env.MIMO_API_KEY || process.env.VITE_MIMO_API_KEY |
 const DATA_API_URL = trimSlash(process.env.DATA_API_URL || process.env.VITE_API_BASE_URL || 'http://127.0.0.1:3030');
 const DATA_WRITE_TOKEN = process.env.NITRO_DATA_WRITE_TOKEN || process.env.NITRO_API_TOKEN || '';
 const REQUIRE_DATA_WRITE_TOKEN = (process.env.NITRO_REQUIRE_DATA_WRITE_TOKEN || 'false').toLowerCase() === 'true';
+const EFFECTIVE_DATA_WRITE_AUTH_REQUIRED = Boolean(DATA_WRITE_TOKEN) || REQUIRE_DATA_WRITE_TOKEN;
 const DATA_ENDPOINTS = new Set([
   '/inventory',
   '/orders',
@@ -71,7 +72,9 @@ const server = http.createServer(async (request, response) => {
         status: 'ok',
         service: 'nitro-api-proxy',
         dataWriteAuthConfigured: Boolean(DATA_WRITE_TOKEN),
-        dataWriteAuthRequired: REQUIRE_DATA_WRITE_TOKEN,
+        dataWriteAuthRequired: EFFECTIVE_DATA_WRITE_AUTH_REQUIRED,
+        dataWriteAuthExplicitlyRequired: REQUIRE_DATA_WRITE_TOKEN,
+        auditLogEnabled: Boolean(DATA_API_URL),
       });
       return;
     }
@@ -111,7 +114,14 @@ const server = http.createServer(async (request, response) => {
 
     if (isDataEndpoint(url.pathname)) {
       if (!canWriteData(request)) {
-        sendJson(response, DATA_WRITE_TOKEN ? 401 : 503, {
+        const status = DATA_WRITE_TOKEN ? 401 : 503;
+        writeAuditLog({
+          request,
+          action: 'Data Write Rejected',
+          detail: `${request.method || 'GET'} ${url.pathname} rejected with ${status}`,
+          status,
+        });
+        sendJson(response, status, {
           error: {
             message: DATA_WRITE_TOKEN
               ? 'Missing or invalid Nitro write token.'
@@ -121,13 +131,23 @@ const server = http.createServer(async (request, response) => {
         return;
       }
 
-      await proxyJson(response, `${DATA_API_URL}${url.pathname}${url.search}`, {
+      const method = request.method || 'GET';
+      const result = await proxyJson(response, `${DATA_API_URL}${url.pathname}${url.search}`, {
         method: request.method || 'GET',
         headers: {
           'Content-Type': request.headers['content-type'] || 'application/json',
         },
-        body: hasRequestBody(request.method) ? await readBody(request) : undefined,
+        body: hasRequestBody(method) ? await readBody(request) : undefined,
       }, 'Nitro data API is not configured.');
+
+      if (UNSAFE_METHODS.has(method)) {
+        writeAuditLog({
+          request,
+          action: 'Data Write',
+          detail: `${method} ${url.pathname} completed with ${result.status}`,
+          status: result.status,
+        });
+      }
       return;
     }
 
@@ -157,17 +177,19 @@ function hermesHeaders() {
 async function proxyJson(response, url, init, missingConfigMessage) {
   if (!url || url.startsWith('/')) {
     sendJson(response, 503, { error: { message: missingConfigMessage } });
-    return;
+    return { status: 503, contentType: 'application/json', text: JSON.stringify({ error: { message: missingConfigMessage } }) };
   }
 
   const upstream = await fetch(url, init).catch(error => {
     throw new Error(`Upstream request failed: ${error instanceof Error ? error.message : String(error)}`);
   });
   const text = await upstream.text();
+  const contentType = upstream.headers.get('content-type') || 'application/json';
   response.writeHead(upstream.status, {
-    'Content-Type': upstream.headers.get('content-type') || 'application/json',
+    'Content-Type': contentType,
   });
   response.end(text);
+  return { status: upstream.status, contentType, text };
 }
 
 function sendJson(response, status, payload) {
@@ -223,6 +245,40 @@ function canWriteData(request) {
 
   const token = readWriteToken(request);
   return safeEqual(token, DATA_WRITE_TOKEN);
+}
+
+function writeAuditLog({ request, action, detail, status }) {
+  if (!DATA_API_URL || DATA_API_URL.startsWith('/')) return;
+
+  const entry = {
+    id: makeAuditId(),
+    timestamp: new Date().toISOString(),
+    action,
+    detail,
+    method: request.method || 'GET',
+    status,
+    sourceIp: readClientIp(request),
+  };
+
+  fetch(`${DATA_API_URL}/auditLogs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  }).catch(error => {
+    console.warn(`Failed to write Nitro audit log: ${error instanceof Error ? error.message : String(error)}`);
+  });
+}
+
+function makeAuditId() {
+  return `audit-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function readClientIp(request) {
+  const forwardedFor = request.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+    return forwardedFor.split(',')[0]?.trim() || 'unknown';
+  }
+  return request.socket.remoteAddress || 'unknown';
 }
 
 function readWriteToken(request) {
