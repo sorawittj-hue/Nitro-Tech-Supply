@@ -2,6 +2,7 @@ import http from 'node:http';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { URL } from 'node:url';
 import path from 'node:path';
+import { timingSafeEqual } from 'node:crypto';
 
 const ROOT = new URL('../', import.meta.url);
 const DIST_DIR = new URL('dist/', ROOT);
@@ -15,7 +16,26 @@ const HERMES_SESSION_KEY = process.env.HERMES_SESSION_KEY || process.env.VITE_HE
 const MIMO_API_URL = trimSlash(process.env.MIMO_API_BASE_URL || process.env.VITE_MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1');
 const MIMO_API_KEY = process.env.MIMO_API_KEY || process.env.VITE_MIMO_API_KEY || '';
 const DATA_API_URL = trimSlash(process.env.DATA_API_URL || process.env.VITE_API_BASE_URL || 'http://127.0.0.1:3030');
-const DATA_ENDPOINTS = new Set(['/inventory', '/orders', '/affiliate', '/finance']);
+const DATA_WRITE_TOKEN = process.env.NITRO_DATA_WRITE_TOKEN || process.env.NITRO_API_TOKEN || '';
+const REQUIRE_DATA_WRITE_TOKEN = (process.env.NITRO_REQUIRE_DATA_WRITE_TOKEN || 'false').toLowerCase() === 'true';
+const DATA_ENDPOINTS = new Set([
+  '/inventory',
+  '/orders',
+  '/affiliate',
+  '/finance',
+  '/customers',
+  '/suppliers',
+  '/quotes',
+  '/invoices',
+  '/payments',
+  '/purchaseOrders',
+  '/shipments',
+  '/claims',
+  '/agentTasks',
+  '/auditLogs',
+  '/chatMessages',
+]);
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const configuredOrigins = (process.env.NITRO_ALLOWED_ORIGINS || '')
   .split(',')
   .map(origin => origin.trim())
@@ -34,8 +54,8 @@ const server = http.createServer(async (request, response) => {
     response.setHeader('Access-Control-Allow-Origin', origin);
     response.setHeader('Vary', 'Origin');
   }
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Nitro-Write-Token');
+  response.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
 
   if (request.method === 'OPTIONS') {
     response.writeHead(204);
@@ -47,7 +67,12 @@ const server = http.createServer(async (request, response) => {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
     if (request.method === 'GET' && url.pathname === '/health') {
-      sendJson(response, 200, { status: 'ok', service: 'nitro-api-proxy' });
+      sendJson(response, 200, {
+        status: 'ok',
+        service: 'nitro-api-proxy',
+        dataWriteAuthConfigured: Boolean(DATA_WRITE_TOKEN),
+        dataWriteAuthRequired: REQUIRE_DATA_WRITE_TOKEN,
+      });
       return;
     }
 
@@ -85,6 +110,17 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (isDataEndpoint(url.pathname)) {
+      if (!canWriteData(request)) {
+        sendJson(response, DATA_WRITE_TOKEN ? 401 : 503, {
+          error: {
+            message: DATA_WRITE_TOKEN
+              ? 'Missing or invalid Nitro write token.'
+              : 'Nitro data write token is required but not configured.',
+          },
+        });
+        return;
+      }
+
       await proxyJson(response, `${DATA_API_URL}${url.pathname}${url.search}`, {
         method: request.method || 'GET',
         headers: {
@@ -109,6 +145,9 @@ const server = http.createServer(async (request, response) => {
 
 server.listen(PORT, () => {
   console.log(`Nitro API proxy listening on http://localhost:${PORT}`);
+  if (!DATA_WRITE_TOKEN) {
+    console.warn('Nitro data writes are not protected by NITRO_DATA_WRITE_TOKEN yet. Set NITRO_REQUIRE_DATA_WRITE_TOKEN=true before production writes.');
+  }
 });
 
 function hermesHeaders() {
@@ -175,6 +214,32 @@ function isDataEndpoint(pathname) {
 
 function hasRequestBody(method) {
   return method === 'POST' || method === 'PUT' || method === 'PATCH';
+}
+
+function canWriteData(request) {
+  const method = request.method || 'GET';
+  if (!UNSAFE_METHODS.has(method)) return true;
+  if (!DATA_WRITE_TOKEN) return !REQUIRE_DATA_WRITE_TOKEN;
+
+  const token = readWriteToken(request);
+  return safeEqual(token, DATA_WRITE_TOKEN);
+}
+
+function readWriteToken(request) {
+  const directToken = request.headers['x-nitro-write-token'];
+  if (typeof directToken === 'string' && directToken) return directToken;
+
+  const authorization = request.headers.authorization || '';
+  if (authorization.startsWith('Bearer ')) return authorization.slice('Bearer '.length).trim();
+  return '';
+}
+
+function safeEqual(left, right) {
+  if (!left || !right) return false;
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function serveStaticApp(response, pathname) {

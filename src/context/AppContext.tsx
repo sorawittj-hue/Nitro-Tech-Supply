@@ -29,6 +29,104 @@ export interface AffiliateData {
 
 export interface FinanceData {
   cashOnHand: number;
+  accountsPayable?: number;
+  weeklyReserveTarget?: number;
+  monthlyOperatingExpense?: number;
+  creditLineAvailable?: number;
+}
+
+export interface CustomerRecord {
+  id: string;
+  name: string;
+  type: 'retail' | 'wholesale';
+  status: 'lead' | 'active' | 'inactive';
+  phone?: string;
+  email?: string;
+  taxId?: string;
+  address?: string;
+  totalSpendTHB: number;
+  lastContactAt?: string;
+}
+
+export interface SupplierRecord {
+  id: string;
+  name: string;
+  status: 'active' | 'watchlist' | 'inactive';
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  leadTimeDays: number;
+  paymentTerms: string;
+  rating: number;
+}
+
+export interface QuoteRecord {
+  id: string;
+  customerId: string;
+  status: 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
+  totalValue: number;
+  grossMargin: number;
+  createdAt: string;
+  validUntil?: string;
+}
+
+export interface InvoiceRecord {
+  id: string;
+  customerId: string;
+  orderId?: string;
+  status: 'Draft' | 'Issued' | 'Paid' | 'Overdue' | 'Cancelled';
+  amount: number;
+  paidAmount: number;
+  dueDate: string;
+  issuedAt?: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  invoiceId: string;
+  method: 'cash' | 'bank_transfer' | 'card' | 'other';
+  amount: number;
+  paidAt: string;
+  reference?: string;
+}
+
+export interface PurchaseOrderRecord {
+  id: string;
+  supplierId: string;
+  status: 'Draft' | 'Approved' | 'Ordered' | 'Received' | 'Cancelled';
+  totalCost: number;
+  createdAt: string;
+  expectedAt?: string;
+}
+
+export interface ShipmentRecord {
+  id: string;
+  orderId: string;
+  carrier: string;
+  trackingNumber?: string;
+  status: 'Pending' | 'Packed' | 'Shipped' | 'Delivered' | 'Delayed';
+  eta?: string;
+}
+
+export interface ClaimRecord {
+  id: string;
+  customerId: string;
+  orderId?: string;
+  item: string;
+  status: 'Open' | 'Testing' | 'Approved' | 'Rejected' | 'Resolved';
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+}
+
+export interface CompanyAgentTask {
+  id: string;
+  agentId: string;
+  title: string;
+  status: 'todo' | 'in_progress' | 'done' | 'blocked';
+  priority: 'low' | 'medium' | 'high';
+  source: 'ceo' | 'hermes' | 'system';
+  createdAt: string;
+  dueAt?: string;
 }
 
 export interface AuditEntry {
@@ -62,6 +160,15 @@ export interface AppState {
   orders: OrderItem[];
   affiliate: AffiliateData | null;
   finance: FinanceData | null;
+  customers: CustomerRecord[];
+  suppliers: SupplierRecord[];
+  quotes: QuoteRecord[];
+  invoices: InvoiceRecord[];
+  payments: PaymentRecord[];
+  purchaseOrders: PurchaseOrderRecord[];
+  shipments: ShipmentRecord[];
+  claims: ClaimRecord[];
+  companyAgentTasks: CompanyAgentTask[];
   loadingData: boolean;
   lastUpdated: string;
   isOffline: boolean;

@@ -39,6 +39,14 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     orders,
     finance,
     affiliate,
+    customers,
+    suppliers,
+    quotes,
+    invoices,
+    purchaseOrders,
+    shipments,
+    claims,
+    companyAgentTasks,
     loadingData,
     isOffline,
     lastUpdated,
@@ -59,6 +67,12 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     const lowStockItems = inventory.filter(item => item.stock <= item.threshold);
     const criticalStockItems = inventory.filter(item => item.stock <= item.threshold * 0.5);
     const activeOrders = orders.filter(order => order.status !== 'Delivered');
+    const outstandingInvoices = invoices.filter(invoice => invoice.status !== 'Paid' && invoice.status !== 'Cancelled');
+    const overdueInvoices = invoices.filter(invoice => invoice.status === 'Overdue');
+    const activePurchaseOrders = purchaseOrders.filter(order => order.status !== 'Received' && order.status !== 'Cancelled');
+    const activeShipments = shipments.filter(shipment => shipment.status !== 'Delivered');
+    const openClaims = claims.filter(claim => claim.status !== 'Resolved' && claim.status !== 'Rejected');
+    const activeAgentTasks = companyAgentTasks.filter(task => task.status !== 'done');
     const workingAgents = agents.filter(agent => agent.status === 'Working').length;
     const totalCapital = cashOnHand + inventoryValue + pendingReceivable;
 
@@ -71,13 +85,27 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
       lowStockItems,
       criticalStockItems,
       activeOrders,
+      outstandingInvoices,
+      overdueInvoices,
+      activePurchaseOrders,
+      activeShipments,
+      openClaims,
+      activeAgentTasks,
       workingAgents,
       teamHealth: agents.length > 0 ? Math.round((workingAgents / agents.length) * 100) : 0,
     };
-  }, [agents, finance, inventory, orders]);
+  }, [agents, claims, companyAgentTasks, finance, inventory, invoices, orders, purchaseOrders, shipments]);
 
   const hasBusinessData = inventory.length > 0
     || orders.length > 0
+    || customers.length > 0
+    || suppliers.length > 0
+    || quotes.length > 0
+    || invoices.length > 0
+    || purchaseOrders.length > 0
+    || shipments.length > 0
+    || claims.length > 0
+    || companyAgentTasks.length > 0
     || (finance?.cashOnHand ?? 0) > 0
     || (affiliate?.conversions ?? 0) > 0
     || (affiliate?.revenueTHB ?? 0) > 0;
@@ -117,6 +145,38 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
         target: 'inventory',
       },
       {
+        id: 'customers',
+        label: 'Customers',
+        status: customers.length > 0 ? 'ready' : 'waiting',
+        detail: customers.length > 0 ? `${customers.length} CRM records tracked.` : 'Create CRM records for leads and repeat buyers.',
+        actionLabel: 'Ask',
+        target: 'chat',
+      },
+      {
+        id: 'suppliers',
+        label: 'Suppliers',
+        status: suppliers.length > 0 ? 'ready' : 'waiting',
+        detail: suppliers.length > 0 ? `${suppliers.length} suppliers tracked.` : 'Add supplier scorecards, terms, and lead times.',
+        actionLabel: 'Ask',
+        target: 'chat',
+      },
+      {
+        id: 'sales-docs',
+        label: 'Sales Docs',
+        status: quotes.length > 0 || invoices.length > 0 ? 'ready' : 'waiting',
+        detail: `${quotes.length} quotes / ${invoices.length} invoices.`,
+        actionLabel: 'Ask',
+        target: 'chat',
+      },
+      {
+        id: 'operations',
+        label: 'PO + Ship',
+        status: purchaseOrders.length > 0 || shipments.length > 0 ? 'ready' : 'waiting',
+        detail: `${purchaseOrders.length} PO / ${shipments.length} shipments.`,
+        actionLabel: 'Ask',
+        target: 'chat',
+      },
+      {
         id: 'finance',
         label: 'Finance',
         status: financeReady ? 'ready' : 'waiting',
@@ -136,12 +196,27 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
         id: 'ai',
         label: 'AI Brain',
         status: aiReady ? 'ready' : 'waiting',
-        detail: aiReady ? `${chatProvider.toUpperCase()} is selected for team chat.` : 'Configure Hermes or MiMo before delegating work.',
+        detail: aiReady ? `${chatProvider.toUpperCase()} selected. ${companyAgentTasks.length} company tasks tracked.` : 'Configure Hermes or MiMo before delegating work.',
         actionLabel: 'Chat',
         target: 'chat',
       },
     ];
-  }, [affiliate, chatProvider, finance, hermesConnected, inventory.length, isOffline, orders.length]);
+  }, [
+    affiliate,
+    chatProvider,
+    companyAgentTasks.length,
+    customers.length,
+    finance,
+    hermesConnected,
+    inventory.length,
+    invoices.length,
+    isOffline,
+    orders.length,
+    purchaseOrders.length,
+    quotes.length,
+    shipments.length,
+    suppliers.length,
+  ]);
 
   const departmentMap = useMemo(() => {
     const grouped = new Map<string, Agent[]>();
@@ -203,6 +278,16 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
       });
     }
 
+    if (metrics.overdueInvoices.length > 0) {
+      actions.push({
+        id: 'overdue-invoices',
+        title: 'Review overdue invoices',
+        owner: 'Vega + Aria',
+        priority: 'high',
+        detail: `${metrics.overdueInvoices.length} invoices need collection follow-up.`,
+      });
+    }
+
     if (metrics.activeOrders.length > 0) {
       actions.push({
         id: 'clear-orders',
@@ -210,6 +295,36 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
         owner: 'Orion + Aria',
         priority: 'medium',
         detail: `${metrics.activeOrders.length} order ยังอยู่ระหว่างจัดการ`,
+      });
+    }
+
+    if (metrics.activePurchaseOrders.length > 0) {
+      actions.push({
+        id: 'open-purchase-orders',
+        title: 'Track open purchase orders',
+        owner: 'Mira + Atlas',
+        priority: 'medium',
+        detail: `${metrics.activePurchaseOrders.length} PO still waiting for supplier or receiving.`,
+      });
+    }
+
+    if (metrics.openClaims.length > 0) {
+      actions.push({
+        id: 'open-claims',
+        title: 'Resolve customer claims',
+        owner: 'Luna + Aria',
+        priority: 'high',
+        detail: `${metrics.openClaims.length} support or warranty claims are still open.`,
+      });
+    }
+
+    if (metrics.activeAgentTasks.length > 0) {
+      actions.push({
+        id: 'active-agent-tasks',
+        title: 'Clear active AI company tasks',
+        owner: 'Orchestrator Nitro',
+        priority: 'medium',
+        detail: `${metrics.activeAgentTasks.length} agent tasks are not completed yet.`,
       });
     }
 
@@ -278,6 +393,9 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
         <MetricCard label="Total Capital" value={currencyFormatter.format(metrics.totalCapital)} sub="Cash + Stock + Receivable" tone="green" />
         <MetricCard label="Realized Sales" value={currencyFormatter.format(metrics.realizedSales)} sub={`${orders.length} orders tracked`} tone="cyan" />
         <MetricCard label="Inventory Value" value={currencyFormatter.format(metrics.inventoryValue)} sub={`${metrics.lowStockItems.length} SKU need attention`} tone={metrics.criticalStockItems.length > 0 ? 'red' : 'amber'} />
+        <MetricCard label="Open Receivables" value={`${metrics.outstandingInvoices.length}`} sub={`${metrics.overdueInvoices.length} overdue invoices`} tone={metrics.overdueInvoices.length > 0 ? 'red' : 'amber'} />
+        <MetricCard label="Ops Pipeline" value={`${metrics.activePurchaseOrders.length + metrics.activeShipments.length}`} sub={`${metrics.activePurchaseOrders.length} PO / ${metrics.activeShipments.length} shipments`} tone="cyan" />
+        <MetricCard label="Claims + Tasks" value={`${metrics.openClaims.length + metrics.activeAgentTasks.length}`} sub={`${metrics.openClaims.length} claims / ${metrics.activeAgentTasks.length} agent tasks`} tone={metrics.openClaims.length > 0 ? 'red' : 'violet'} />
         <MetricCard label="Team Health" value={`${metrics.teamHealth}%`} sub={`${metrics.workingAgents}/${agents.length} agents working`} tone="violet" />
       </div>
 

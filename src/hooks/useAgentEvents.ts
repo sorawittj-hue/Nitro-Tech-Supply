@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Agent } from '../data/agents';
-import type { AffiliateData, FinanceData, InventoryItem, OrderItem } from '../context/AppContext';
+import type {
+  AffiliateData,
+  ClaimRecord,
+  CompanyAgentTask,
+  CustomerRecord,
+  FinanceData,
+  InventoryItem,
+  InvoiceRecord,
+  OrderItem,
+  PaymentRecord,
+  PurchaseOrderRecord,
+  QuoteRecord,
+  ShipmentRecord,
+  SupplierRecord,
+} from '../context/AppContext';
 import type { ConsoleLog } from '../components/SystemConsole';
 import { transport } from '../transport';
 
@@ -11,6 +25,15 @@ interface UseAgentEventsOptions {
   setOrders: Dispatch<SetStateAction<OrderItem[]>>;
   setFinance: Dispatch<SetStateAction<FinanceData | null>>;
   setAffiliate: Dispatch<SetStateAction<AffiliateData | null>>;
+  setCustomers: Dispatch<SetStateAction<CustomerRecord[]>>;
+  setSuppliers: Dispatch<SetStateAction<SupplierRecord[]>>;
+  setQuotes: Dispatch<SetStateAction<QuoteRecord[]>>;
+  setInvoices: Dispatch<SetStateAction<InvoiceRecord[]>>;
+  setPayments: Dispatch<SetStateAction<PaymentRecord[]>>;
+  setPurchaseOrders: Dispatch<SetStateAction<PurchaseOrderRecord[]>>;
+  setShipments: Dispatch<SetStateAction<ShipmentRecord[]>>;
+  setClaims: Dispatch<SetStateAction<ClaimRecord[]>>;
+  setCompanyAgentTasks: Dispatch<SetStateAction<CompanyAgentTask[]>>;
   addLog: (type: ConsoleLog['type'], message: string) => void;
 }
 
@@ -58,6 +81,17 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
         case 'capital.update':
           if (message.finance) options.setFinance(message.finance);
           if (message.affiliate) options.setAffiliate(message.affiliate);
+          break;
+        case 'business.records.update':
+          if (message.customers) options.setCustomers(message.customers);
+          if (message.suppliers) options.setSuppliers(message.suppliers);
+          if (message.quotes) options.setQuotes(message.quotes);
+          if (message.invoices) options.setInvoices(message.invoices);
+          if (message.payments) options.setPayments(message.payments);
+          if (message.purchaseOrders) options.setPurchaseOrders(message.purchaseOrders);
+          if (message.shipments) options.setShipments(message.shipments);
+          if (message.claims) options.setClaims(message.claims);
+          if (message.agentTasks) options.setCompanyAgentTasks(message.agentTasks);
           break;
         default:
           break;

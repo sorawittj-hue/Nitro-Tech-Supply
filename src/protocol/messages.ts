@@ -1,5 +1,19 @@
 import type { Agent } from '../data/agents';
-import type { AffiliateData, FinanceData, InventoryItem, OrderItem } from '../context/AppContext';
+import type {
+  AffiliateData,
+  ClaimRecord,
+  CompanyAgentTask,
+  CustomerRecord,
+  FinanceData,
+  InventoryItem,
+  InvoiceRecord,
+  OrderItem,
+  PaymentRecord,
+  PurchaseOrderRecord,
+  QuoteRecord,
+  ShipmentRecord,
+  SupplierRecord,
+} from '../context/AppContext';
 
 export interface BaseMessage {
   type: string;
@@ -64,6 +78,19 @@ export interface CapitalUpdateMsg extends BaseMessage {
   affiliate?: AffiliateData;
 }
 
+export interface BusinessRecordsUpdateMsg extends BaseMessage {
+  type: 'business.records.update';
+  customers?: CustomerRecord[];
+  suppliers?: SupplierRecord[];
+  quotes?: QuoteRecord[];
+  invoices?: InvoiceRecord[];
+  payments?: PaymentRecord[];
+  purchaseOrders?: PurchaseOrderRecord[];
+  shipments?: ShipmentRecord[];
+  claims?: ClaimRecord[];
+  agentTasks?: CompanyAgentTask[];
+}
+
 export type ServerMessage =
   | AgentStatusMsg
   | AgentTaskStartMsg
@@ -73,7 +100,8 @@ export type ServerMessage =
   | TelegramMessageMsg
   | InventoryUpdateMsg
   | OrderUpdateMsg
-  | CapitalUpdateMsg;
+  | CapitalUpdateMsg
+  | BusinessRecordsUpdateMsg;
 
 export interface WebviewReadyMsg extends BaseMessage {
   type: 'webview.ready';
@@ -138,6 +166,7 @@ export function parseServerMessage(raw: string): ServerMessage | null {
       case 'inventory.update':
       case 'order.update':
       case 'capital.update':
+      case 'business.records.update':
         return parsed as ServerMessage;
       default:
         return null;

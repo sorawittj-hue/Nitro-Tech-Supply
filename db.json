@@ -1,12 +1,27 @@
 {
   "inventory": [],
   "orders": [],
+  "customers": [],
+  "suppliers": [],
+  "quotes": [],
+  "invoices": [],
+  "payments": [],
+  "purchaseOrders": [],
+  "shipments": [],
+  "claims": [],
+  "agentTasks": [],
+  "auditLogs": [],
+  "chatMessages": [],
   "affiliate": {
     "totalClicks": 0,
     "conversions": 0,
     "revenueTHB": 0
   },
   "finance": {
-    "cashOnHand": 0
+    "cashOnHand": 0,
+    "accountsPayable": 0,
+    "weeklyReserveTarget": 0,
+    "monthlyOperatingExpense": 0,
+    "creditLineAvailable": 0
   }
 }

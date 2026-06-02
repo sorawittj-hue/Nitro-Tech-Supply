@@ -5,13 +5,36 @@ import type { ConsoleLog } from '../components/SystemConsole';
 import { testHermesConnection as testHermesProviderConnection } from '../providers/providerFactory';
 import type { ChatProviderConfig, ChatProviderId } from '../providers/types';
 import { useAgentEvents } from '../hooks/useAgentEvents';
-import { parseAffiliateData, parseFinanceData, parseInventoryData, parseOrderData } from '../lib/businessDataValidators';
+import {
+  parseAffiliateData,
+  parseClaimData,
+  parseCompanyAgentTaskData,
+  parseCustomerData,
+  parseFinanceData,
+  parseInventoryData,
+  parseInvoiceData,
+  parseOrderData,
+  parsePaymentData,
+  parsePurchaseOrderData,
+  parseQuoteData,
+  parseShipmentData,
+  parseSupplierData,
+} from '../lib/businessDataValidators';
 import { 
   AppContext, 
   type InventoryItem, 
   type OrderItem, 
   type AffiliateData, 
   type FinanceData, 
+  type CustomerRecord,
+  type SupplierRecord,
+  type QuoteRecord,
+  type InvoiceRecord,
+  type PaymentRecord,
+  type PurchaseOrderRecord,
+  type ShipmentRecord,
+  type ClaimRecord,
+  type CompanyAgentTask,
   type AuditEntry, 
   type ToastItem,
   type AppContextValue 
@@ -42,6 +65,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [affiliate, setAffiliate] = useState<AffiliateData | null>(null);
   const [finance, setFinance] = useState<FinanceData | null>(null);
+  const [customers, setCustomers] = useState<CustomerRecord[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
+  const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderRecord[]>([]);
+  const [shipments, setShipments] = useState<ShipmentRecord[]>([]);
+  const [claims, setClaims] = useState<ClaimRecord[]>([]);
+  const [companyAgentTasks, setCompanyAgentTasks] = useState<CompanyAgentTask[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<string>('—');
   const [isOffline, setIsOffline] = useState<boolean>(false);
@@ -84,6 +116,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setOrders,
     setFinance,
     setAffiliate,
+    setCustomers,
+    setSuppliers,
+    setQuotes,
+    setInvoices,
+    setPayments,
+    setPurchaseOrders,
+    setShipments,
+    setClaims,
+    setCompanyAgentTasks,
     addLog,
   }), [addLog]);
 
@@ -93,53 +134,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshAllData = useCallback(async () => {
     setLoadingData(true);
     try {
-      const [invRes, ordRes, affRes, finRes] = await Promise.all([
-        fetch(`${apiBase}/inventory`),
-        fetch(`${apiBase}/orders`),
-        fetch(`${apiBase}/affiliate`),
-        fetch(`${apiBase}/finance`),
+      const [
+        invData,
+        ordData,
+        affData,
+        finData,
+        customerData,
+        supplierData,
+        quoteData,
+        invoiceData,
+        paymentData,
+        purchaseOrderData,
+        shipmentData,
+        claimData,
+        agentTaskData,
+      ] = await Promise.all([
+        fetchJson(`${apiBase}/inventory`, parseInventoryData, 'Inventory'),
+        fetchJson(`${apiBase}/orders`, parseOrderData, 'Orders'),
+        fetchJson(`${apiBase}/affiliate`, parseAffiliateData, 'Affiliate'),
+        fetchJson(`${apiBase}/finance`, parseFinanceData, 'Finance'),
+        fetchJson(`${apiBase}/customers`, parseCustomerData, 'Customers'),
+        fetchJson(`${apiBase}/suppliers`, parseSupplierData, 'Suppliers'),
+        fetchJson(`${apiBase}/quotes`, parseQuoteData, 'Quotes'),
+        fetchJson(`${apiBase}/invoices`, parseInvoiceData, 'Invoices'),
+        fetchJson(`${apiBase}/payments`, parsePaymentData, 'Payments'),
+        fetchJson(`${apiBase}/purchaseOrders`, parsePurchaseOrderData, 'Purchase orders'),
+        fetchJson(`${apiBase}/shipments`, parseShipmentData, 'Shipments'),
+        fetchJson(`${apiBase}/claims`, parseClaimData, 'Claims'),
+        fetchJson(`${apiBase}/agentTasks`, parseCompanyAgentTaskData, 'Agent tasks'),
       ]);
-
-      if (!invRes.ok) {
-        throw new Error(`Inventory API returned status ${invRes.status} (${invRes.statusText})`);
-      }
-      const invContentType = invRes.headers.get('content-type') || '';
-      if (!invContentType.includes('application/json')) {
-        throw new Error(`Inventory API returned non-JSON content-type: "${invContentType}"`);
-      }
-      const invData = parseInventoryData(await invRes.json());
-
-      if (!ordRes.ok) {
-        throw new Error(`Orders API returned status ${ordRes.status} (${ordRes.statusText})`);
-      }
-      const ordContentType = ordRes.headers.get('content-type') || '';
-      if (!ordContentType.includes('application/json')) {
-        throw new Error(`Orders API returned non-JSON content-type: "${ordContentType}"`);
-      }
-      const ordData = parseOrderData(await ordRes.json());
-
-      if (!affRes.ok) {
-        throw new Error(`Affiliate API returned status ${affRes.status} (${affRes.statusText})`);
-      }
-      const affContentType = affRes.headers.get('content-type') || '';
-      if (!affContentType.includes('application/json')) {
-        throw new Error(`Affiliate API returned non-JSON content-type: "${affContentType}"`);
-      }
-      const affData = parseAffiliateData(await affRes.json());
-
-      if (!finRes.ok) {
-        throw new Error(`Finance API returned status ${finRes.status} (${finRes.statusText})`);
-      }
-      const finContentType = finRes.headers.get('content-type') || '';
-      if (!finContentType.includes('application/json')) {
-        throw new Error(`Finance API returned non-JSON content-type: "${finContentType}"`);
-      }
-      const finData = parseFinanceData(await finRes.json());
 
       setInventory(invData);
       setOrders(ordData);
       setAffiliate(affData);
       setFinance(finData);
+      setCustomers(customerData);
+      setSuppliers(supplierData);
+      setQuotes(quoteData);
+      setInvoices(invoiceData);
+      setPayments(paymentData);
+      setPurchaseOrders(purchaseOrderData);
+      setShipments(shipmentData);
+      setClaims(claimData);
+      setCompanyAgentTasks(agentTaskData);
       setIsOffline(false);
       
       const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -151,6 +188,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOrders([]);
       setAffiliate(null);
       setFinance(null);
+      setCustomers([]);
+      setSuppliers([]);
+      setQuotes([]);
+      setInvoices([]);
+      setPayments([]);
+      setPurchaseOrders([]);
+      setShipments([]);
+      setClaims([]);
+      setCompanyAgentTasks([]);
       
       const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
       setLastUpdated(`${ts} (Offline)`);
@@ -396,6 +442,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     orders,
     affiliate,
     finance,
+    customers,
+    suppliers,
+    quotes,
+    invoices,
+    payments,
+    purchaseOrders,
+    shipments,
+    claims,
+    companyAgentTasks,
     loadingData,
     lastUpdated,
     isOffline,
@@ -490,6 +545,18 @@ function resolveApiBase(envApiBase?: string): string {
     return getBrowserOrigin();
   }
   return configured;
+}
+
+async function fetchJson<T>(url: string, parser: (value: unknown) => T, label: string): Promise<T> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`${label} API returned status ${response.status} (${response.statusText})`);
+  }
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`${label} API returned non-JSON content-type: "${contentType}"`);
+  }
+  return parser(await response.json());
 }
 
 function isLocalhostUrl(value: string): boolean {
