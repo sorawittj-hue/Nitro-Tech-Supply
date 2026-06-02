@@ -9,6 +9,7 @@ import { RestockGrid } from './components/RestockGrid';
 import { ActiveOrders } from './components/ActiveOrders';
 import { CompanyCapital } from './components/CompanyCapital';
 import { BusinessCommandCenter } from './components/BusinessCommandCenter';
+import { BusinessOps } from './components/BusinessOps';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastContainer } from './components/ToastContainer';
 import { SearchBar } from './components/SearchBar';
@@ -56,9 +57,11 @@ export default function App() {
     transportConnected,
     lastAgentEventAt,
     debugMode,
+    dataWriteToken,
     setChatProvider,
     setHermesConfig,
     setDebugMode,
+    setDataWriteToken,
     testHermesConnection,
   } = app;
 
@@ -165,7 +168,7 @@ export default function App() {
             debugMode={debugMode}
           />
 
-          {activePanel !== 'none' && activePanel !== 'analytics' && activePanel !== 'settings' && activePanel !== 'command' && (
+          {activePanel !== 'none' && activePanel !== 'analytics' && activePanel !== 'settings' && activePanel !== 'command' && activePanel !== 'ops' && (
             <>
               <div className="side-panel-overlay" onClick={() => setActivePanel('none')} />
               <div className="side-panel">
@@ -238,6 +241,21 @@ export default function App() {
                 </div>
                 <div className="side-panel-body">
                   <BusinessCommandCenter agents={agents} onSelectAgent={setSelectedAgent} onNavigate={setActivePanel} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {activePanel === 'ops' && (
+            <>
+              <div className="side-panel-overlay" onClick={() => setActivePanel('none')} />
+              <div className="side-panel" style={{ width: '92vw', maxWidth: '1280px' }}>
+                <div className="side-panel-header">
+                  <h2>🏭 BUSINESS OPS</h2>
+                  <button className="side-panel-close" onClick={() => setActivePanel('none')}>✕</button>
+                </div>
+                <div className="side-panel-body">
+                  <BusinessOps agents={agents} />
                 </div>
               </div>
             </>
@@ -393,6 +411,34 @@ export default function App() {
 
                   <div className="panel-card">
                     <div className="panel-card-header">
+                      <span className="panel-card-title">NITRO WRITE ACCESS</span>
+                      <span className={`badge ${dataWriteToken ? 'badge-success' : 'badge-warning'}`}>
+                        {dataWriteToken ? 'SESSION TOKEN SET' : 'READ ONLY'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>
+                      Business writes use X-Nitro-Write-Token. The token is kept only in this browser session and is not saved to git or localStorage.
+                    </p>
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ fontSize: '14px', color: 'var(--accent-cyan)' }}>DATA WRITE TOKEN</label>
+                      <input
+                        type="password"
+                        value={dataWriteToken}
+                        onChange={(event) => setDataWriteToken(event.target.value)}
+                        className="chat-input-field"
+                        placeholder="NITRO_DATA_WRITE_TOKEN"
+                        style={{ width: '100%', marginTop: '4px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button type="button" className="btn btn-ghost" onClick={() => setDataWriteToken('')}>
+                        Clear Token
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="panel-card">
+                    <div className="panel-card-header">
                       <span className="panel-card-title">🎵 LOFI PLAYER</span>
                     </div>
                     <Suspense fallback={<PanelLoading />}>
@@ -421,6 +467,10 @@ export default function App() {
 
           <button className={`dock-item ${activePanel === 'chat' ? 'active' : ''}`} onClick={() => togglePanel('chat')}>
             <span className="dock-item-icon">💬</span><span>Chat</span>
+          </button>
+
+          <button className={`dock-item ${activePanel === 'ops' ? 'active' : ''}`} onClick={() => togglePanel('ops')}>
+            <span className="dock-item-icon">🏭</span><span>Ops</span>
           </button>
 
           <button className={`dock-item ${activePanel === 'income' ? 'active' : ''}`} onClick={() => togglePanel('income')}>

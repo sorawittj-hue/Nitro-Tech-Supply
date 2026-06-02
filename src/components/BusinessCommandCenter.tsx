@@ -16,7 +16,7 @@ interface ExecutiveAction {
   detail: string;
 }
 
-type CommandPanelTarget = 'inventory' | 'chat' | 'income' | 'analytics';
+type CommandPanelTarget = 'inventory' | 'chat' | 'income' | 'analytics' | 'ops';
 
 interface ReadinessItem {
   id: string;
@@ -43,6 +43,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     suppliers,
     quotes,
     invoices,
+    payments,
     purchaseOrders,
     shipments,
     claims,
@@ -102,6 +103,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     || suppliers.length > 0
     || quotes.length > 0
     || invoices.length > 0
+    || payments.length > 0
     || purchaseOrders.length > 0
     || shipments.length > 0
     || claims.length > 0
@@ -149,32 +151,32 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
         label: 'Customers',
         status: customers.length > 0 ? 'ready' : 'waiting',
         detail: customers.length > 0 ? `${customers.length} CRM records tracked.` : 'Create CRM records for leads and repeat buyers.',
-        actionLabel: 'Ask',
-        target: 'chat',
+        actionLabel: 'Open',
+        target: 'ops',
       },
       {
         id: 'suppliers',
         label: 'Suppliers',
         status: suppliers.length > 0 ? 'ready' : 'waiting',
         detail: suppliers.length > 0 ? `${suppliers.length} suppliers tracked.` : 'Add supplier scorecards, terms, and lead times.',
-        actionLabel: 'Ask',
-        target: 'chat',
+        actionLabel: 'Open',
+        target: 'ops',
       },
       {
         id: 'sales-docs',
         label: 'Sales Docs',
         status: quotes.length > 0 || invoices.length > 0 ? 'ready' : 'waiting',
-        detail: `${quotes.length} quotes / ${invoices.length} invoices.`,
-        actionLabel: 'Ask',
-        target: 'chat',
+        detail: `${quotes.length} quotes / ${invoices.length} invoices / ${payments.length} payments.`,
+        actionLabel: 'Open',
+        target: 'ops',
       },
       {
         id: 'operations',
         label: 'PO + Ship',
         status: purchaseOrders.length > 0 || shipments.length > 0 ? 'ready' : 'waiting',
         detail: `${purchaseOrders.length} PO / ${shipments.length} shipments.`,
-        actionLabel: 'Ask',
-        target: 'chat',
+        actionLabel: 'Open',
+        target: 'ops',
       },
       {
         id: 'finance',
@@ -212,6 +214,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     invoices.length,
     isOffline,
     orders.length,
+    payments.length,
     purchaseOrders.length,
     quotes.length,
     shipments.length,
@@ -353,6 +356,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
         </div>
         <div className="command-hero-actions">
           <button className="btn btn-primary" onClick={() => onNavigate('inventory')}>เปิดคลังสินค้า</button>
+          <button className="btn btn-ghost" onClick={() => onNavigate('ops')}>Business Ops</button>
           <button className="btn btn-ghost" onClick={() => onNavigate('chat')}>สั่งทีม AI</button>
           <button className="btn btn-ghost" onClick={refreshAllData}>Refresh</button>
         </div>

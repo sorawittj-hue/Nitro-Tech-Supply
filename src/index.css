@@ -2615,11 +2615,108 @@ body {
   white-space: nowrap;
 }
 
+/* ========================================
+   BUSINESS OPS
+   ======================================== */
+.business-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px;
+}
+
+.business-ops-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.business-summary-card,
+.business-ops-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.business-ops-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.business-ops-tab {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.business-ops-tab.active,
+.business-ops-tab:hover {
+  color: var(--text-primary);
+  border-color: var(--border-glow-cyan);
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.business-ops-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+}
+
+.business-ops-form,
+.business-ops-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--border-glow-cyan);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.08);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+.business-ops-list {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.business-ops-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
 @media (max-width: 1100px) {
   .command-readiness-grid,
   .command-metrics-grid,
   .command-grid,
-  .command-grid.three {
+  .command-grid.three,
+  .business-ops-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -2641,6 +2738,8 @@ body {
   .command-readiness-grid,
   .command-grid,
   .command-grid.three,
+  .business-ops-summary,
+  .business-ops-grid,
   .department-grid {
     grid-template-columns: 1fr;
   }

@@ -35,6 +35,7 @@ import {
   type ShipmentRecord,
   type ClaimRecord,
   type CompanyAgentTask,
+  type BusinessCollection,
   type AuditEntry, 
   type ToastItem,
   type AppContextValue 
@@ -56,6 +57,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [chatProvider, setChatProvider] = useState<ChatProviderId>(() => loadChatProvider(import.meta.env.VITE_NITRO_PROXY_URL, import.meta.env.VITE_HERMES_API_URL, import.meta.env.VITE_HERMES_API_KEY, import.meta.env.VITE_MIMO_API_KEY));
   const [hermesConnected, setHermesConnected] = useState<boolean>(false);
   const [debugMode, setDebugMode] = useState<boolean>(() => localStorage.getItem('nitro-tech:debug-mode') === 'true');
+  const [dataWriteToken, setDataWriteToken] = useState<string>(() => sessionStorage.getItem('nitro-tech:data-write-token') || '');
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [retryCount, setRetryCount] = useState<number>(0);
@@ -231,7 +233,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch(`${apiBase}/inventory/${item.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildWriteHeaders(dataWriteToken),
         body: JSON.stringify({ ...item, stock: newStock }),
       });
       if (!res.ok) throw new Error('Failed to update stock');
@@ -249,7 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addAuditLog('Stock Adjust (Offline)', `${item.name} ${item.stock} → ${newStock} locally`);
       addToast('warning', `${item.name}: ${item.stock} → ${newStock} (โหมดออฟไลน์)`);
     }
-  }, [apiBase, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
+  }, [apiBase, dataWriteToken, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
 
   const saveInventoryItem = useCallback(async (item: Omit<InventoryItem, 'id'> & { id?: string }) => {
     if (isOffline) {
@@ -273,7 +275,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (item.id) {
         const res = await fetch(`${apiBase}/inventory/${item.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildWriteHeaders(dataWriteToken),
           body: JSON.stringify(item),
         });
         if (!res.ok) throw new Error('Failed to update inventory item');
@@ -286,7 +288,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newItem = { ...item, id: Date.now().toString() };
         const res = await fetch(`${apiBase}/inventory`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildWriteHeaders(dataWriteToken),
           body: JSON.stringify(newItem),
         });
         if (!res.ok) throw new Error('Failed to create inventory item');
@@ -313,7 +315,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addToast('warning', `เพิ่มสินค้า ${offlineItem.name} สำเร็จ (โหมดออฟไลน์)`);
       }
     }
-  }, [apiBase, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
+  }, [apiBase, dataWriteToken, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
 
   const deleteInventoryItem = useCallback(async (id: string) => {
     if (isOffline) {
@@ -324,7 +326,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const res = await fetch(`${apiBase}/inventory/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${apiBase}/inventory/${id}`, {
+        method: 'DELETE',
+        headers: buildWriteHeaders(dataWriteToken),
+      });
       if (!res.ok) throw new Error('Failed to delete inventory item');
       setInventory(prev => prev.filter(i => i.id !== id));
       addLog('INFO', `🗑️ ลบสินค้าออกจากคลัง ${id}`);
@@ -338,7 +343,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addAuditLog('Inventory Delete (Offline)', `Deleted ${id} locally`);
       addToast('warning', 'ลบสินค้าสำเร็จ (โหมดออฟไลน์)');
     }
-  }, [apiBase, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
+  }, [apiBase, dataWriteToken, isOffline, setIsOffline, addLog, addAuditLog, addToast]);
+
+  const createBusinessRecord = useCallback(async <TRecord extends Record<string, unknown>>(
+    collection: BusinessCollection,
+    record: TRecord
+  ): Promise<TRecord> => {
+    const response = await fetch(`${apiBase}/${collection}`, {
+      method: 'POST',
+      headers: buildWriteHeaders(dataWriteToken),
+      body: JSON.stringify(record),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch((): { error?: { message?: string } } => ({}));
+      throw new Error(payload.error?.message || `${collection} API returned status ${response.status}`);
+    }
+
+    const saved = await response.json() as TRecord;
+    addAuditLog('Business Record Create', `${collection}: ${String(record.id ?? 'new')}`);
+    addLog('INFO', `Created ${collection} record ${String(record.id ?? 'new')}`);
+    await refreshAllData();
+    return saved;
+  }, [addAuditLog, addLog, apiBase, dataWriteToken, refreshAllData]);
+
+  const updateBusinessRecord = useCallback(async <TRecord extends Record<string, unknown>>(
+    collection: BusinessCollection,
+    id: string,
+    patch: Partial<TRecord>
+  ): Promise<TRecord> => {
+    const response = await fetch(`${apiBase}/${collection}/${id}`, {
+      method: 'PATCH',
+      headers: buildWriteHeaders(dataWriteToken),
+      body: JSON.stringify(patch),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch((): { error?: { message?: string } } => ({}));
+      throw new Error(payload.error?.message || `${collection}/${id} API returned status ${response.status}`);
+    }
+
+    const saved = await response.json() as TRecord;
+    addAuditLog('Business Record Update', `${collection}: ${id}`);
+    addLog('INFO', `Updated ${collection} record ${id}`);
+    await refreshAllData();
+    return saved;
+  }, [addAuditLog, addLog, apiBase, dataWriteToken, refreshAllData]);
 
   useEffect(() => {
     localStorage.setItem('mimoModel', aiModel);
@@ -355,6 +405,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem('nitro-tech:debug-mode', String(debugMode));
   }, [debugMode]);
+
+  useEffect(() => {
+    if (dataWriteToken) {
+      sessionStorage.setItem('nitro-tech:data-write-token', dataWriteToken);
+    } else {
+      sessionStorage.removeItem('nitro-tech:data-write-token');
+    }
+  }, [dataWriteToken]);
 
   const testHermesConnection = useCallback(async () => {
     const ok = await testHermesProviderConnection(hermesConfig);
@@ -460,6 +518,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     transportConnected,
     lastAgentEventAt,
     debugMode,
+    dataWriteToken,
     setAgents,
     setSelectedAgent,
     setLogs,
@@ -476,6 +535,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setHermesConfig,
     setHermesConnected,
     setDebugMode,
+    setDataWriteToken,
     addLog,
     handleUpdateAgent,
     handleWakeAgent,
@@ -487,6 +547,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     adjustStock,
     saveInventoryItem,
     deleteInventoryItem,
+    createBusinessRecord,
+    updateBusinessRecord,
     testHermesConnection,
   };
 
@@ -557,6 +619,16 @@ async function fetchJson<T>(url: string, parser: (value: unknown) => T, label: s
     throw new Error(`${label} API returned non-JSON content-type: "${contentType}"`);
   }
   return parser(await response.json());
+}
+
+function buildWriteHeaders(dataWriteToken: string): HeadersInit {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (dataWriteToken) {
+    headers['X-Nitro-Write-Token'] = dataWriteToken;
+  }
+  return headers;
 }
 
 function isLocalhostUrl(value: string): boolean {

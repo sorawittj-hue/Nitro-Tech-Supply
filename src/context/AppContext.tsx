@@ -178,7 +178,21 @@ export interface AppState {
   transportConnected: boolean;
   lastAgentEventAt: number | null;
   debugMode: boolean;
+  dataWriteToken: string;
 }
+
+export type BusinessCollection =
+  | 'customers'
+  | 'suppliers'
+  | 'quotes'
+  | 'invoices'
+  | 'payments'
+  | 'purchaseOrders'
+  | 'shipments'
+  | 'claims'
+  | 'agentTasks'
+  | 'auditLogs'
+  | 'chatMessages';
 
 export interface AppContextValue extends AppState {
   setAgents: React.Dispatch<React.SetStateAction<Agent[]>>;
@@ -197,6 +211,7 @@ export interface AppContextValue extends AppState {
   setHermesConfig: React.Dispatch<React.SetStateAction<ChatProviderConfig>>;
   setHermesConnected: React.Dispatch<React.SetStateAction<boolean>>;
   setDebugMode: React.Dispatch<React.SetStateAction<boolean>>;
+  setDataWriteToken: React.Dispatch<React.SetStateAction<string>>;
   addLog: (type: ConsoleLog['type'], message: string) => void;
   handleUpdateAgent: (updatedAgent: Agent) => void;
   handleWakeAgent: (agent: Agent) => void;
@@ -208,6 +223,12 @@ export interface AppContextValue extends AppState {
   adjustStock: (item: InventoryItem, delta: number) => Promise<void>;
   saveInventoryItem: (item: Omit<InventoryItem, 'id'> & { id?: string }) => Promise<void>;
   deleteInventoryItem: (id: string) => Promise<void>;
+  createBusinessRecord: <TRecord extends Record<string, unknown>>(collection: BusinessCollection, record: TRecord) => Promise<TRecord>;
+  updateBusinessRecord: <TRecord extends Record<string, unknown>>(
+    collection: BusinessCollection,
+    id: string,
+    patch: Partial<TRecord>
+  ) => Promise<TRecord>;
   testHermesConnection: () => Promise<boolean>;
 }
 
