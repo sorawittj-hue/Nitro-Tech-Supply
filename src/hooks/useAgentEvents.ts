@@ -61,6 +61,38 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
           ));
           break;
         }
+        case 'agent.task.start': {
+          const agentId = canonicalAgentId(message.agentId);
+          options.setAgents(prev => prev.map(agent => {
+            if (agent.id !== agentId) return agent;
+            const activeTools = appendUnique(agent.activeTools ?? [], message.taskId);
+            return {
+              ...agent,
+              status: 'Working',
+              isLive: true,
+              isWaiting: true,
+              activeTools,
+              lastActiveAt: Date.now(),
+            };
+          }));
+          options.addLog('INFO', `Agent task started: ${message.title} (${message.taskId})`);
+          break;
+        }
+        case 'agent.task.done': {
+          const agentId = canonicalAgentId(message.agentId);
+          options.setAgents(prev => prev.map(agent => {
+            if (agent.id !== agentId) return agent;
+            const activeTools = (agent.activeTools ?? []).filter(taskId => taskId !== message.taskId);
+            return {
+              ...agent,
+              isWaiting: activeTools.length > 0,
+              activeTools,
+              lastActiveAt: Date.now(),
+            };
+          }));
+          options.addLog('INFO', `Agent task done: ${message.taskId}${message.result ? ` - ${message.result}` : ''}`);
+          break;
+        }
         case 'agent.token.usage': {
           const agentId = canonicalAgentId(message.agentId);
           options.setAgents(prev => prev.map(agent => agent.id === agentId
@@ -112,4 +144,9 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
   }, [options]);
 
   return { isConnected, lastEventAt };
+}
+
+function appendUnique(items: string[], item: string): string[] {
+  if (items.includes(item)) return items;
+  return [...items, item];
 }
