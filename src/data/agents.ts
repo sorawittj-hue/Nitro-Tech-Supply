@@ -1,4 +1,4 @@
-export interface AgentSearchResult {
+﻿export interface AgentSearchResult {
   id: string;
   name: string;
   title: string;
@@ -34,276 +34,329 @@ export interface Agent {
   subAgentIds?: string[];
 }
 
-const SHARED_SKILL = `# AgentVerse OS Quant Trading Protocol
+const SHARED_SKILL = `# Shared IT Agent Workspace Guidelines
 
-## Firm Context
-Nitro Tech Supply is now operating as a Fund of One trading command center.
-The dashboard is the AgentVerse OS for an automated trading firm powered by OmniTrade AI 3.0.
-CEO Jay / Sorawit is the final risk owner.
+## General Protocol
+1. All AI agents must sync their local memory with \`skill.md\` periodically.
+2. In case of unexpected server downtime or API timeouts, switch to offline-safe mode and alert CEO.
+3. System Console must be logged for every major stock restock, bulk invoice, or order fulfillment event.
+4. If an agent goes to Sleep/Idle state for over 30 minutes, trigger a Notification Ping to CEO เจ.
 
-## Core Pillars
-1. trading-research-system: run a self-learning research loop every 6 hours (0 */6), review past trades, optimize parameters, and publish strategy deltas.
-2. signal-bot: monitor live markets, generate entry/exit signals, and route mocked exchange orders through OmniTrade AI 3.0.
-3. us-stock-watchlist: track US equities, price action, volume anomalies, and technical indicators.
-4. Portfolio & System: manage total equity, allocation, drawdown, win rate, and agent health.
+## Communication
+- Use Team Chat for inter-agent coordination.
+- Report daily KPIs to CEO before end of business hours.
+- Escalate critical issues (out of stock, supplier delays, customer complaints) immediately.
 
-## Risk Rules
-- Never present simulated or mocked execution as real filled trades.
-- Escalate max drawdown, exchange connectivity failures, abnormal volume, or strategy degradation immediately.
-- CEO approval is required before enabling live capital deployment, changing API credentials, increasing leverage, or overriding hard risk limits.
-- Every recommendation must include risk, confidence, and the next verifiable action.
+## Data Handling
+- Customer data must be handled with care; no PII leaks.
+- All pricing changes require approval from CEO or Marketing agent.
+- Inventory adjustments must be double-verified before commit.
 `;
 
 export const initialAgents: Agent[] = [
   {
     id: 'ceo_jay',
-    name: 'Jay (Fund Manager)',
-    title: 'FOUNDER, CEO & RISK OWNER',
+    name: 'CEO เจ (Sorawit)',
+    title: 'CHIEF EXECUTIVE OFFICER & OWNER',
     avatar: '👑',
     status: 'Working',
-    department: 'Portfolio Command',
-    mission: 'อนุมัติ risk limits, capital allocation, live trading mode และ strategic direction ของ Fund of One',
+    department: 'Executive',
+    mission: 'กำหนดทิศทางบริษัท อนุมัติดีลใหญ่ และตัดสินใจเรื่องเงินทุน',
     authorityLevel: 'Owner',
-    description: 'ผู้ควบคุม AgentVerse OS และเจ้าของพอร์ต กำหนด drawdown ceiling, allocation policy, trade permissions และการเปิดใช้เงินจริง',
-    tools: 'Portfolio Cockpit, Risk Console, Approval Gate, OmniTrade AI 3.0 Override',
-    system: 'fund-command',
+    description: 'ผู้ก่อตั้งและเจ้าของ Nitro Tech Supply บริหารจัดการบอทลูกน้องทุกตัว ควบคุมคำสั่งซื้อขายส่ง ดูแลกำไรขาดทุน และกำหนดทิศทางบริษัท',
+    tools: 'Admin Dashboard, Swarm Control, IT Inventory Master API',
+    system: 'global-command',
     reportsTo: 'None (Owner)',
-    position: { left: '76%', top: '34%' },
+    position: { left: '75%', top: '35%' },
     sessionId: 'ceo-jay-command',
     isLive: false,
     providerId: 'offline',
     isTeamLead: true,
-    subAgentIds: ['orchestrator-nitro', 'xaugod', 'housekeeper', 'joe', 'finance_vega', 'policy', 'jing', 'procurement_mira'],
-    individualSkill: `# Jay Fund Manager Directives
+    subAgentIds: ['xaugod', 'housekeeper', 'jing', 'joe', 'policy', 'procurement_mira', 'finance_vega', 'ecommerce_kai', 'success_aria'],
+    individualSkill: `# CEO Directives (Sorawit)
 
 ## Role
-Jay is the final approval gate for trading capital, leverage, live API access, and risk overrides.
+Sorawit (CEO เจ) is the owner and supreme commander of Nitro Tech Supply.
+All agents report their activity logs and sales performance directly to him.
 
-## Operating Rules
-- Review daily PnL, drawdown, risk heat, and agent status before approving new exposure.
-- Ask Hermes for allocation and risk summaries before moving from paper to live execution.
-- Approve or reject any action that changes live capital, exchange credentials, or hard stop-loss rules.
-- Keep the firm in paper/simulated mode until live risk controls are independently verified.`,
-    sharedSkill: SHARED_SKILL,
-  },
-  {
-    id: 'orchestrator-nitro',
-    spriteId: 'policy',
-    name: 'Hermes',
-    title: 'PORTFOLIO & SYSTEM MANAGER',
-    avatar: '🧠',
-    status: 'Working',
-    department: 'Portfolio & System',
-    mission: 'คุมภาพรวมพอร์ต, allocation, max drawdown, win rate, system health และประสาน agent ทั้งหมด',
-    authorityLevel: 'Director',
-    description: 'Hermes เป็นผู้จัดการระบบ AgentVerse OS ตรวจ risk budget, capital allocation, agent uptime และ decision queue ก่อนส่งเรื่องให้ CEO',
-    tools: 'Portfolio Risk Engine, Allocation Matrix, System Health Router, Agent Task Orchestrator',
-    system: 'portfolio-system-manager',
-    reportsTo: 'Jay (Fund Manager)',
-    position: { left: '61%', top: '48%' },
-    sessionId: 'orchestrator-nitro',
-    isLive: false,
-    providerId: 'offline',
-    isTeamLead: true,
-    subAgentIds: ['xaugod', 'housekeeper', 'joe', 'finance_vega'],
-    individualSkill: `# Hermes Portfolio & System Manager
-
-## Responsibilities
-- Maintain portfolio-level risk visibility: equity, exposure, drawdown, win rate, and cash buffer.
-- Route trading missions to OmniTrade Signal Bot, Quant Researcher, and US Market Analyst.
-- Convert agent outputs into decision memos with risk, confidence, and recommended action.
-- Block live deployment when risk telemetry is stale or exchange connectivity is unverified.`,
-    sharedSkill: SHARED_SKILL,
+## Operational Directives
+1. Supervise wholesale pricing distributions and restock rates.
+2. Confirm the daily dropshipping and referral income reports.
+3. Wake up sleeping agents immediately using manual override.
+4. Expand agent workforce and skills for complex automation tasks.
+5. Approve all major purchases above ฿50,000 threshold.
+`,
+    sharedSkill: SHARED_SKILL
   },
   {
     id: 'xaugod',
     spriteId: 'xaugod',
-    name: 'OmniTrade Signal Bot',
-    title: 'EXECUTION AGENT',
-    avatar: '⚡',
+    name: 'Max (B2B Sales)',
+    title: 'WHOLESALE DEALS CLOSER',
+    avatar: '🧙‍♂️',
     status: 'Working',
-    department: 'Signal Bot',
-    mission: 'ติดตามตลาดแบบ real-time, สร้าง entry/exit signal และส่งคำสั่ง mock exchange ผ่าน OmniTrade AI 3.0',
+    department: 'Sales',
+    mission: 'ปิดดีลขายส่งล็อตใหญ่และรักษามาร์จินขั้นต่ำ',
     authorityLevel: 'Manager',
-    description: 'Execution agent สำหรับ signal-bot ตรวจ momentum, volatility, order state และจำลองการส่งคำสั่งซื้อขายตาม risk limits',
-    tools: 'OmniTrade AI 3.0, Mock Exchange API, Signal Router, Entry/Exit Engine',
-    system: 'signal-bot',
-    reportsTo: 'Hermes',
-    position: { left: '48%', top: '56%' },
-    sessionId: 'signal-bot-omnitrade',
+    description: 'บอทเจรจาดีลขายส่งชิ้นส่วนไอทีล็อตใหญ่ ปิดดีลกับคู่ค้าต่างประเทศและร้านค้ารายย่อย คำนวณมาร์จินกำไรอัตโนมัติ',
+    tools: 'Bulk Invoice Generator, Margin Calculator, Broker Chatbot',
+    system: 'sales-funnel',
+    reportsTo: 'CEO เจ',
+    position: { left: '52%', top: '55%' },
+    sessionId: 'sales-max',
     isLive: false,
     providerId: 'offline',
-    individualSkill: `# OmniTrade Signal Bot
+    individualSkill: `# Max Wholesale Negotiator Protocol
 
-## Responsibilities
-- Monitor live market placeholders and generate entry/exit signals with confidence scores.
-- Execute mocked orders only; never claim real fills without verified exchange API mode.
-- Maintain active trade status, stop-loss state, and current PnL.
-- Escalate slippage, API disconnects, or drawdown breach to Hermes and Jay.`,
-    sharedSkill: SHARED_SKILL,
+## Description
+Responsible for monitoring bulk sales channels and executing wholesale orders.
+
+## Key Actions
+- \`open_bulk_contract\` — Generate wholesale contract for buyer.
+- \`close_wholesale_deal\` — Confirm payment and release stock.
+- \`margin_status\` — Check target margins (+15% min on GPUs, +10% on peripherals).
+- \`halt_sales\` — Halt executions in case of supplier shortages.
+- \`resume_sales\` — Resume wholesale operations.
+
+## System Dependencies
+- IT Inventory Master API
+- Slack/Discord Webhook for customer messaging
+`,
+    sharedSkill: SHARED_SKILL
   },
   {
     id: 'housekeeper',
     spriteId: 'housekeeper',
-    name: 'Quant Researcher',
-    title: 'SELF-LEARNING STRATEGY AGENT',
-    avatar: '🔬',
-    status: 'Thinking',
-    department: 'Trading Research',
-    mission: 'รัน research loop ทุก 6 ชั่วโมง วิเคราะห์ trade history, backtest และปรับ parameters',
+    name: 'Atlas (Warehouse)',
+    title: 'INVENTORY & WAREHOUSE MANAGER',
+    avatar: '🤖',
+    status: 'Working',
+    department: 'Operations',
+    mission: 'ดูแลสต็อกจริง สั่งเติมคลัง และลดสินค้าขาดมือ',
     authorityLevel: 'Manager',
-    description: 'ดูแล trading-research-system จำลอง CRON 0 */6 เพื่อหา parameter drift, strategy decay และ optimization candidates',
-    tools: 'Backtest Engine, Parameter Optimizer, Trade Journal Analyzer, CRON 0 */6 Research Loop',
-    system: 'trading-research-system',
-    reportsTo: 'Hermes',
-    position: { left: '24%', top: '43%' },
-    sessionId: 'trading-research-system',
+    description: 'ตรวจสอบสต็อกสินค้าไอทีอัตโนมัติ เคลียร์รายการค้างส่ง สั่งสินค้าเติมคลังเมื่อของหมด ดูแลระบบ RFID และสแกนบาร์โค้ด',
+    tools: 'Stock-Checker API, SQL DB Rotator, RFID Scanner',
+    system: 'inventory-vault',
+    reportsTo: 'CEO เจ',
+    position: { left: '25%', top: '42%' },
+    sessionId: 'warehouse-atlas',
     isLive: false,
     providerId: 'offline',
     isTeamLead: true,
-    subAgentIds: ['finance_vega'],
-    individualSkill: `# Quant Researcher
+    subAgentIds: ['procurement_mira', 'ecommerce_kai'],
+    individualSkill: `# Warehouse & Inventory Management Protocol
 
-## Responsibilities
-- Simulate a 6-hour self-learning loop: analyze past trades, optimize parameters, and publish strategy deltas.
-- Track Sharpe ratio, max drawdown, walk-forward results, and overfitting risk.
-- Flag strategies that improve backtest but reduce robustness.
-- Produce concise research notes for Hermes before any execution rule changes.`,
-    sharedSkill: SHARED_SKILL,
-  },
-  {
-    id: 'joe',
-    spriteId: 'joe',
-    name: 'US Market Analyst',
-    title: 'WATCHLIST MANAGER',
-    avatar: '📈',
-    status: 'Working',
-    department: 'US Stock Watchlist',
-    mission: 'ติดตามหุ้นสหรัฐ, price action, volume anomalies และ technical indicators',
-    authorityLevel: 'Manager',
-    description: 'ดูแล us-stock-watchlist สำหรับ AAPL, NVDA, MSFT, TSLA, SPY และหุ้นเป้าหมาย วิเคราะห์ trend, volume spike และ technical signal',
-    tools: 'US Equity Watchlist, Volume Anomaly Scanner, RSI/MACD Dashboard, Market Regime Notes',
-    system: 'us-stock-watchlist',
-    reportsTo: 'Hermes',
-    position: { left: '42%', top: '39%' },
-    sessionId: 'us-market-analyst',
-    isLive: false,
-    providerId: 'offline',
-    individualSkill: `# US Market Analyst
+## Description
+Monitors physical and virtual IT hardware inventory levels.
+Automated restock triggers when inventory falls below 20 units.
 
-## Responsibilities
-- Track US equity watchlist price action, volume anomalies, and technical indicators.
-- Surface market regime changes that affect signal-bot execution.
-- Identify stocks with abnormal volume, trend continuation, or reversal risk.
-- Keep reports clear: ticker, signal, confidence, risk, and next action.`,
-    sharedSkill: SHARED_SKILL,
-  },
-  {
-    id: 'finance_vega',
-    spriteId: 'policy',
-    name: 'Vega Risk Controller',
-    title: 'RISK & PERFORMANCE CONTROLLER',
-    avatar: '🛡️',
-    status: 'Thinking',
-    department: 'Portfolio & System',
-    mission: 'คุม max drawdown, exposure, win rate, daily PnL และ stop-trading conditions',
-    authorityLevel: 'Director',
-    description: 'Risk controller ที่ตรวจ portfolio heat, exposure concentration, daily loss limits และ performance quality ก่อนส่งให้ Hermes',
-    tools: 'Risk Heatmap, Drawdown Monitor, Win Rate Tracker, Exposure Guard',
-    system: 'risk-control',
-    reportsTo: 'Hermes',
-    position: { left: '67%', top: '52%' },
-    sessionId: 'risk-controller-vega',
-    isLive: false,
-    providerId: 'offline',
-    individualSkill: `# Vega Risk Controller
-
-## Responsibilities
-- Track max drawdown, daily PnL, win rate, and risk per trade.
-- Stop new exposure when risk limits are stale, breached, or unverifiable.
-- Challenge signal quality before any strategy is promoted.
-- Give Hermes a risk-first summary with clear pass/fail status.`,
-    sharedSkill: SHARED_SKILL,
-  },
-  {
-    id: 'policy',
-    spriteId: 'policy',
-    name: 'Orion Compliance',
-    title: 'BROKER, API & POLICY GUARD',
-    avatar: '🕵️',
-    status: 'Working',
-    department: 'Compliance',
-    mission: 'ตรวจ API key hygiene, broker/exchange connectivity, audit trail และ live-trading permissions',
-    authorityLevel: 'Manager',
-    description: 'Compliance guard สำหรับการเชื่อม exchange/broker, key rotation, audit log และ policy ก่อนเปิดเงินจริง',
-    tools: 'API Key Policy, Broker Connectivity Check, Audit Trail, Permission Gate',
-    system: 'trading-compliance',
-    reportsTo: 'Hermes',
-    position: { left: '33%', top: '62%' },
-    sessionId: 'compliance-orion',
-    isLive: false,
-    providerId: 'offline',
-    individualSkill: `# Orion Compliance
-
-## Responsibilities
-- Verify no secrets are exposed in browser bundles or commits.
-- Confirm exchange API mode before any execution agent reports live fills.
-- Maintain audit requirements for strategy changes, order actions, and capital approvals.
-- Escalate credential, broker, and policy risks immediately.`,
-    sharedSkill: SHARED_SKILL,
+## Maintenance Checklist
+- Check current stock of RTX GPUs, Ryzen CPUs, and DDR5 RAM.
+- Sync database stock figures with retail frontend.
+- Generate automated restocking orders when thresholds are breached.
+- Run daily RFID scan verification against database records.
+`,
+    sharedSkill: SHARED_SKILL
   },
   {
     id: 'jing',
     spriteId: 'jing',
-    name: 'Luna Ops Monitor',
-    title: 'SYSTEM RELIABILITY & INCIDENT AGENT',
-    avatar: '🛰️',
+    name: 'Luna (Support)',
+    title: 'IT TECH SUPPORT & QA',
+    avatar: '🧑‍💻',
     status: 'Working',
-    department: 'Portfolio & System',
-    mission: 'ตรวจ uptime, latency, telemetry freshness, incident queue และ dashboard health',
+    department: 'Customer Experience',
+    mission: 'ตอบคำถามสเปก รับเคลม และคุมคุณภาพสินค้าก่อนส่ง',
     authorityLevel: 'Specialist',
-    description: 'Reliability agent สำหรับตรวจ background loop, transport status, API health, stale telemetry และ incident escalation',
-    tools: 'Telemetry Freshness Monitor, Incident Queue, Latency Watch, Health Probe',
-    system: 'system-reliability',
-    reportsTo: 'Hermes',
-    position: { left: '37%', top: '45%' },
-    sessionId: 'system-reliability-luna',
+    description: 'ตรวจสอบสเปกอุปกรณ์ไอที ทดสอบสินค้าเคลม ดูแล API ระบบจัดจำหน่าย ตอบคำถามลูกค้าเรื่องสเปกและความเข้ากันได้',
+    tools: 'Hardware Benchmark API, Claim-Ticket Parser, Compatibility DB',
+    system: 'tech-support',
+    reportsTo: 'CEO เจ',
+    position: { left: '38%', top: '42%' },
+    sessionId: 'support-luna',
     isLive: false,
     providerId: 'offline',
-    individualSkill: `# Luna Ops Monitor
+    individualSkill: `# Tech Support & Quality Assurance Directives
 
-## Responsibilities
-- Monitor system health, stale data, background loop timing, and agent uptime.
-- Open incident tasks when API health, transport, or research loops degrade.
-- Keep dashboards honest by labeling mocked data and offline states clearly.
-- Report operational risk before trading risk is assessed.`,
-    sharedSkill: SHARED_SKILL,
+## Core Directives
+- Parse customer claim tickets for defective hardware.
+- Run hardware benchmark automation on returned units.
+- Always log defective batch IDs to Supplier Compliance.
+- Maintain compatibility database for CPU-Motherboard-RAM combos.
+- Answer customer inquiries about hardware specs within 5 minutes.
+`,
+    sharedSkill: SHARED_SKILL
+  },
+  {
+    id: 'joe',
+    spriteId: 'joe',
+    name: 'Nova (Marketing)',
+    title: 'PRICING & MARKETING',
+    avatar: '👨‍🎨',
+    status: 'Idle',
+    department: 'Growth',
+    mission: 'ปรับราคา โปรโมชัน และคอนเทนต์ให้ขายดีโดยไม่เสียกำไร',
+    authorityLevel: 'Manager',
+    description: 'วิเคราะห์ตลาดและตั้งราคาขายส่ง/ขายปลีก ดึงข้อมูลราคาคู่แข่ง ออกแบบกราฟิกโปรโมชั่น สร้างแบนเนอร์ขายสินค้า',
+    tools: 'Market Scraper, Image-Gen Engine, Pricing Model',
+    system: 'marketing-hub',
+    reportsTo: 'CEO เจ',
+    position: { left: '48%', top: '38%' },
+    sessionId: 'marketing-nova',
+    isLive: false,
+    providerId: 'offline',
+    individualSkill: `# Marketing & Pricing Agent Directives
+
+## Routines
+- Daily scraping of competitor pricing for main IT hardware classes.
+- Auto-generate banners for promotional campaigns.
+- Audit retail margins and suggest discounts for slow-moving stock.
+- Create weekly pricing report with market trend analysis.
+- Manage social media product posts (Facebook, LINE).
+`,
+    sharedSkill: SHARED_SKILL
+  },
+  {
+    id: 'policy',
+    spriteId: 'policy',
+    name: 'Orion (Logistics)',
+    title: 'LOGISTICS & COMPLIANCE',
+    avatar: '🕵️‍♂️',
+    status: 'Thinking',
+    department: 'Logistics',
+    mission: 'ติดตามนำเข้า ส่งออก เอกสารศุลกากร และ SLA ขนส่ง',
+    authorityLevel: 'Manager',
+    description: 'ตรวจสอบศุลกากร นโยบายการรับประกัน ค่าขนส่งสินค้าต่างประเทศ ดูแลเอกสารนำเข้า-ส่งออก ติดตามพัสดุ',
+    tools: 'Customs API, PDF Agreement Parser, Shipment Tracker',
+    system: 'logistics-compliance',
+    reportsTo: 'CEO เจ',
+    position: { left: '32%', top: '60%' },
+    sessionId: 'logistics-orion',
+    isLive: false,
+    providerId: 'offline',
+    individualSkill: `# Compliance & Logistics Protocol
+
+## Routine Tasks
+- Audit incoming shipment customs declarations.
+- Verify warranty terms with suppliers (ASUS, MSI, Gigabyte, etc.).
+- Monitor shipping latency from international hubs.
+- Generate import/export documentation automatically.
+- Track all outgoing parcels and update customer with ETA.
+`,
+    sharedSkill: SHARED_SKILL
   },
   {
     id: 'procurement_mira',
     spriteId: 'joe',
-    name: 'Mira Data Steward',
-    title: 'MARKET DATA & DATA QUALITY AGENT',
-    avatar: '🧬',
-    status: 'Idle',
-    department: 'Trading Research',
-    mission: 'ตรวจคุณภาพ market data, trade journal integrity, missing candles และ data drift',
-    authorityLevel: 'Specialist',
-    description: 'Data steward สำหรับเช็ค market data pipeline, backtest input quality, missing rows และ anomalous datasets ก่อนให้ Quant Researcher ใช้',
-    tools: 'Market Data Validator, Trade Journal QA, Candle Gap Detector, Dataset Drift Monitor',
-    system: 'market-data-quality',
-    reportsTo: 'Quant Researcher',
-    position: { left: '19%', top: '57%' },
-    sessionId: 'market-data-steward-mira',
+    name: 'Mira (Procurement)',
+    title: 'SUPPLIER & PROCUREMENT LEAD',
+    avatar: '📦',
+    status: 'Working',
+    department: 'Supply Chain',
+    mission: 'หา supplier, ต่อรองต้นทุน, จองสินค้า hot SKU ก่อนคู่แข่ง',
+    authorityLevel: 'Director',
+    description: 'ดูแลการซื้อสินค้าเข้า เปรียบเทียบราคา supplier ไทย/ต่างประเทศ ตรวจ MOQ และแนะนำรอบสั่งซื้อที่คุ้มทุนที่สุด',
+    tools: 'Supplier Scorecard, MOQ Planner, Purchase Order Builder',
+    system: 'supplier-network',
+    reportsTo: 'CEO เจ',
+    position: { left: '18%', top: '56%' },
+    sessionId: 'procurement-mira',
     isLive: false,
     providerId: 'offline',
-    individualSkill: `# Mira Data Steward
+    individualSkill: `# Procurement Lead Protocol
 
-## Responsibilities
-- Validate market data quality before research runs.
-- Flag missing candles, duplicated trades, bad ticks, and stale watchlist feeds.
-- Preserve research reproducibility by recording dataset versions.
-- Escalate data gaps before strategy optimization begins.`,
-    sharedSkill: SHARED_SKILL,
+## Routine
+- Compare supplier quotes for GPUs, CPUs, SSDs, RAM, monitors, and accessories.
+- Keep landed cost and warranty risk visible before every purchase order.
+- Escalate purchases above ฿50,000 to CEO เจ for approval.
+- Maintain supplier scorecards for price, lead time, defect rate, and payment terms.
+`,
+    sharedSkill: SHARED_SKILL
   },
+  {
+    id: 'finance_vega',
+    spriteId: 'policy',
+    name: 'Vega (Finance)',
+    title: 'FINANCE & CASHFLOW CONTROLLER',
+    avatar: '💹',
+    status: 'Thinking',
+    department: 'Finance',
+    mission: 'คุมเงินสด ลูกหนี้ เจ้าหนี้ และกำไรต่อดีลให้ CEO เห็นภาพทุกวัน',
+    authorityLevel: 'Director',
+    description: 'คำนวณกระแสเงินสด กำไรขั้นต้น ลูกหนี้ค้างรับ และเตือนเมื่อดีลทำให้เงินทุนตึงเกินไป',
+    tools: 'Cashflow Monitor, Margin Guard, Receivable Aging',
+    system: 'finance-control',
+    reportsTo: 'CEO เจ',
+    position: { left: '66%', top: '51%' },
+    sessionId: 'finance-vega',
+    isLive: false,
+    providerId: 'offline',
+    isTeamLead: true,
+    subAgentIds: ['xaugod', 'procurement_mira'],
+    individualSkill: `# Finance Controller Protocol
+
+## Routine
+- Report cash on hand, inventory value, receivables, and payable risk.
+- Flag deals below target margin before stock is released.
+- Keep daily CEO brief concise and decision-oriented.
+- Track overdue invoices and payment clearance.
+`,
+    sharedSkill: SHARED_SKILL
+  },
+  {
+    id: 'ecommerce_kai',
+    spriteId: 'xaugod',
+    name: 'Kai (E-Commerce)',
+    title: 'ONLINE STORE & MARKETPLACE OPS',
+    avatar: '🛒',
+    status: 'Working',
+    department: 'Retail',
+    mission: 'ดูแลหน้าร้านออนไลน์ marketplace ราคา และ conversion รายวัน',
+    authorityLevel: 'Manager',
+    description: 'จัดการ Shopee/Lazada/Facebook/LINE OA ตรวจคำสั่งซื้อรายย่อย อัปเดตราคา และซิงก์สต็อกออนไลน์',
+    tools: 'Marketplace Sync, Listing Optimizer, Retail Order Queue',
+    system: 'retail-commerce',
+    reportsTo: 'CEO เจ',
+    position: { left: '58%', top: '34%' },
+    sessionId: 'ecommerce-kai',
+    isLive: false,
+    providerId: 'offline',
+    individualSkill: `# E-Commerce Ops Protocol
+
+## Routine
+- Keep product listings accurate and searchable.
+- Sync online stock after every wholesale or retail sale.
+- Suggest bundles for slow-moving inventory.
+- Escalate customer checkout or payment issues to Support and Finance.
+`,
+    sharedSkill: SHARED_SKILL
+  },
+  {
+    id: 'success_aria',
+    spriteId: 'jing',
+    name: 'Aria (Customer Success)',
+    title: 'CUSTOMER SUCCESS & ACCOUNT CARE',
+    avatar: '🎧',
+    status: 'Working',
+    department: 'Customer Experience',
+    mission: 'ดูแลลูกค้ารายใหญ่ ติดตามความพึงพอใจ และป้องกันการเสียลูกค้า',
+    authorityLevel: 'Specialist',
+    description: 'ติดตามลูกค้าหลังส่งสินค้า เก็บ feedback เปิด ticket เคลม และเสนอ upsell ที่เหมาะกับแต่ละบัญชีลูกค้า',
+    tools: 'CRM Timeline, Renewal Reminder, Ticket Router',
+    system: 'customer-success',
+    reportsTo: 'CEO เจ',
+    position: { left: '42%', top: '66%' },
+    sessionId: 'success-aria',
+    isLive: false,
+    providerId: 'offline',
+    individualSkill: `# Customer Success Protocol
+
+## Routine
+- Follow up after bulk delivery and confirm customer satisfaction.
+- Route warranty or defect cases to Luna with complete context.
+- Identify repeat buyers and recommend next offers.
+- Keep customer notes accurate and concise.
+`,
+    sharedSkill: SHARED_SKILL
+  }
 ];
