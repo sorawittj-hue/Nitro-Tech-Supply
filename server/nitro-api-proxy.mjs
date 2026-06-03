@@ -444,6 +444,9 @@ async function updateAgentRun(id, patch) {
 
 async function materializeBusinessActions(command, hermesForward, agentRun) {
   if (!DATA_API_URL || DATA_API_URL.startsWith('/')) return [];
+  if (command.type === 'purchase.order.draft') {
+    return materializePurchaseOrderDraft(command, hermesForward, agentRun);
+  }
   if (command.type !== 'agent.task.assign') return [];
   if (typeof command.agentId !== 'string' || typeof command.title !== 'string') return [];
 
@@ -500,6 +503,70 @@ async function materializeBusinessActions(command, hermesForward, agentRun) {
   }];
 }
 
+async function materializePurchaseOrderDraft(command, hermesForward, agentRun) {
+  if (typeof command.supplierId !== 'string' || typeof command.totalCost !== 'number') return [];
+
+  const supplierId = command.supplierId.trim();
+  const purchaseOrderId = typeof command.purchaseOrderId === 'string' && command.purchaseOrderId.trim()
+    ? command.purchaseOrderId.trim()
+    : makePurchaseOrderId(agentRun?.id);
+  const description = typeof command.description === 'string' && command.description.trim()
+    ? command.description.trim()
+    : typeof command.title === 'string' && command.title.trim()
+      ? command.title.trim()
+      : 'Hermes drafted purchase order';
+  const requiresApproval = command.totalCost > 50_000;
+  const approvalStatus = requiresApproval ? 'pending' : 'not_required';
+  const approvalReason = requiresApproval
+    ? 'CEO approval required for purchase orders above THB 50,000.'
+    : 'Below CEO approval threshold.';
+
+  const supplier = await fetchJsonData(`/suppliers/${encodeURIComponent(supplierId)}`);
+  if (!supplier || typeof supplier.id !== 'string') {
+    throw new Error(`Supplier ${supplierId} was not found. Create the supplier before drafting this PO.`);
+  }
+
+  const payload = {
+    id: purchaseOrderId,
+    supplierId,
+    status: 'Draft',
+    description,
+    totalCost: command.totalCost,
+    createdAt: new Date().toISOString(),
+    expectedAt: typeof command.expectedAt === 'string' ? command.expectedAt : undefined,
+    approvalStatus,
+    approvalReason,
+  };
+
+  const existingOrders = await fetchJsonData(`/purchaseOrders?id=${encodeURIComponent(purchaseOrderId)}`);
+  const existing = Array.isArray(existingOrders) && existingOrders.length > 0 ? existingOrders[0] : null;
+  if (existing && typeof existing.id === 'string') {
+    await writeDataRecord(`/purchaseOrders/${encodeURIComponent(existing.id)}`, 'PATCH', {
+      supplierId: payload.supplierId,
+      status: payload.status,
+      description: payload.description,
+      totalCost: payload.totalCost,
+      expectedAt: payload.expectedAt,
+      approvalStatus: payload.approvalStatus,
+      approvalReason: payload.approvalReason,
+    });
+    return [{
+      type: 'purchase_order',
+      id: purchaseOrderId,
+      status: 'updated',
+      detail: `Updated draft PO for supplier ${supplierId}. Approval: ${approvalStatus}.`,
+    }];
+  }
+
+  await writeDataRecord('/purchaseOrders', 'POST', payload);
+  return [{
+    type: 'purchase_order',
+    id: purchaseOrderId,
+    status: 'created',
+    detail: `Created draft PO for supplier ${supplierId}. Total THB ${command.totalCost}. Approval: ${approvalStatus}. Hermes: ${(hermesForward.result || '').slice(0, 240)}`,
+  }];
+}
+
 async function fetchJsonData(pathname) {
   const response = await fetchWithRetry(`${DATA_API_URL}${pathname}`);
   if (response.status === 404) return null;
@@ -546,6 +613,7 @@ function shouldForwardTransportCommand(type) {
     || type === 'agent.task.assign'
     || type === 'agent.skill.update'
     || type === 'chat.send'
+    || type === 'purchase.order.draft'
     || type === 'diagnostics.request';
 }
 
@@ -573,6 +641,10 @@ function formatTransportCommandForHermes(command) {
   appendIfString(lines, 'source', command.source);
   appendIfString(lines, 'text', command.text);
   appendIfString(lines, 'sessionKey', command.sessionKey);
+  appendIfString(lines, 'supplierId', command.supplierId);
+  appendIfString(lines, 'description', command.description);
+  appendIfString(lines, 'expectedAt', command.expectedAt);
+  if (typeof command.totalCost === 'number') lines.push(`totalCost: ${command.totalCost}`);
 
   if (command.type === 'agent.skill.update') {
     lines.push(`individualSkillUpdated: ${typeof command.individualSkill === 'string'}`);
@@ -622,6 +694,15 @@ function parseTransportCommand(rawBody) {
     return { ok: false, message: 'chat.send requires text.' };
   }
 
+  if (type === 'purchase.order.draft') {
+    if (typeof value.supplierId !== 'string' || !value.supplierId.trim()) {
+      return { ok: false, message: 'purchase.order.draft requires supplierId.' };
+    }
+    if (typeof value.totalCost !== 'number' || !Number.isFinite(value.totalCost) || value.totalCost < 0) {
+      return { ok: false, message: 'purchase.order.draft requires non-negative totalCost.' };
+    }
+  }
+
   return { ok: true, value };
 }
 
@@ -632,6 +713,7 @@ function isAllowedTransportCommandType(type) {
     || type === 'agent.skill.update'
     || type === 'chat.send'
     || type === 'layout.save'
+    || type === 'purchase.order.draft'
     || type === 'diagnostics.request';
 }
 
@@ -639,7 +721,10 @@ function summarizeTransportCommand(command) {
   const parts = [command.type];
   if (typeof command.agentId === 'string') parts.push(`agent=${command.agentId}`);
   if (typeof command.taskId === 'string') parts.push(`task=${command.taskId}`);
+  if (typeof command.purchaseOrderId === 'string') parts.push(`po=${command.purchaseOrderId}`);
+  if (typeof command.supplierId === 'string') parts.push(`supplier=${command.supplierId}`);
   if (typeof command.title === 'string') parts.push(`title=${command.title.slice(0, 120)}`);
+  if (typeof command.description === 'string') parts.push(`description=${command.description.slice(0, 120)}`);
   return parts.join(' ');
 }
 
@@ -649,6 +734,10 @@ function normalizeTaskPriority(value) {
 
 function makeAgentTaskId(runId) {
   return `task-${runId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`;
+}
+
+function makePurchaseOrderId(runId) {
+  return `po-${runId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`;
 }
 
 function readBody(request) {

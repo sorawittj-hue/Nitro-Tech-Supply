@@ -1,4 +1,4 @@
-import type { AgentRunRecord } from '../context/AppContext';
+import type { AgentRunBusinessAction, AgentRunRecord } from '../context/AppContext';
 import type { Agent } from '../data/agents';
 
 interface AgentRunsViewProps {
@@ -75,7 +75,7 @@ export function AgentRunsView({ runs, agents, onRefresh }: AgentRunsViewProps) {
                     {run.businessActions.map(action => (
                       <div key={`${run.id}-${action.type}-${action.id}`} className={`agent-run-action ${action.status}`}>
                         <strong>{action.status.toUpperCase()}</strong>
-                        <p>{action.type}/{action.id}</p>
+                        <p>{formatActionType(action.type)}/{action.id}</p>
                         <small>{action.detail}</small>
                       </div>
                     ))}
@@ -115,6 +115,11 @@ function statusTone(status: AgentRunRecord['status']): string {
   if (status === 'accepted') return 'warning';
   if (status === 'not_forwardable') return 'neutral';
   return 'danger';
+}
+
+function formatActionType(type: AgentRunBusinessAction['type']): string {
+  if (type === 'purchase_order') return 'purchase_order';
+  return 'agent_task';
 }
 
 function formatDateTime(value: string): string {
