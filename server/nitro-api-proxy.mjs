@@ -13,6 +13,7 @@ const PORT = Number(process.env.NITRO_PROXY_PORT || 8787);
 const HERMES_API_URL = trimSlash(process.env.HERMES_API_URL || process.env.VITE_HERMES_API_URL || '');
 const HERMES_API_KEY = process.env.HERMES_API_KEY || process.env.VITE_HERMES_API_KEY || '';
 const HERMES_SESSION_KEY = process.env.HERMES_SESSION_KEY || process.env.VITE_HERMES_SESSION_KEY || 'nitro-tech-jay';
+const HERMES_COMMAND_TIMEOUT_MS = readPositiveIntegerEnv('HERMES_COMMAND_TIMEOUT_MS', 60_000);
 const MIMO_API_URL = trimSlash(process.env.MIMO_API_BASE_URL || process.env.VITE_MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1');
 const MIMO_API_KEY = process.env.MIMO_API_KEY || process.env.VITE_MIMO_API_KEY || '';
 const DATA_API_URL = trimSlash(process.env.DATA_API_URL || process.env.VITE_API_BASE_URL || 'http://127.0.0.1:3030');
@@ -293,7 +294,7 @@ async function forwardTransportCommandToHermes(command) {
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
+  const timeout = setTimeout(() => controller.abort(), HERMES_COMMAND_TIMEOUT_MS);
 
   try {
     const response = await fetch(`${HERMES_API_URL}/v1/chat/completions`, {
@@ -569,6 +570,17 @@ function loadEnvFile(fileUrl) {
 
 function trimSlash(value) {
   return value.replace(/\/$/, '');
+}
+
+function readPositiveIntegerEnv(key, fallback) {
+  const rawValue = process.env[key];
+  if (!rawValue) return fallback;
+  const parsed = Number(rawValue);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    console.warn(`${key} must be a positive integer. Falling back to ${fallback}.`);
+    return fallback;
+  }
+  return parsed;
 }
 
 function isDataEndpoint(pathname) {
