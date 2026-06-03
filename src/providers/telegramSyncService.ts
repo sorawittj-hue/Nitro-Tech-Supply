@@ -23,6 +23,7 @@ export class TelegramSyncService {
   private lastSeenAt = Date.now();
   private onNewMessage: ((msg: IncomingTelegramMessage) => void) | null = null;
   private unsubscribeTransport: (() => void) | null = null;
+  private readonly seenMessageIds = new Set<string>();
   private readonly config: ChatProviderConfig;
 
   constructor(config: ChatProviderConfig) {
@@ -34,8 +35,11 @@ export class TelegramSyncService {
     this.onNewMessage = callback;
     this.unsubscribeTransport = transport.onMessage(message => {
       if (message.type !== 'telegram.message') return;
+      const messageId = `telegram-${message.timestamp ?? message.text}`;
+      if (this.seenMessageIds.has(messageId)) return;
+      this.seenMessageIds.add(messageId);
       callback({
-        id: `telegram-${message.timestamp ?? Date.now()}`,
+        id: messageId,
         sender: message.sender || 'Jay (Telegram)',
         avatar: '📱',
         text: message.text,
@@ -58,13 +62,38 @@ export class TelegramSyncService {
   }
 
   private async poll(): Promise<void> {
-    if (!this.config.hermesApiUrl || !this.config.hermesApiKey || !this.onNewMessage) return;
+    if (!this.onNewMessage) return;
 
+    const payload = await this.pollViaProxy() ?? await this.pollViaDirectHermes();
+    if (!payload) return;
+
+    this.processRunsResponse(payload);
+  }
+
+  private async pollViaProxy(): Promise<RunsResponse | null> {
+    if (!this.config.nitroProxyUrl) return null;
+
+    const baseUrl = this.config.nitroProxyUrl.replace(/\/$/, '');
+    const health = await fetch(`${baseUrl}/api/hermes/health`).catch(() => null);
+    if (!health?.ok) return null;
+
+    const url = new URL(`${baseUrl}/api/hermes/runs`);
+    url.searchParams.set('session_key', this.config.hermesSessionKey || 'nitro-tech-jay');
+    url.searchParams.set('platform', 'telegram');
+    url.searchParams.set('since', String(this.lastSeenAt));
+
+    const response = await fetch(url).catch(() => null);
+    if (!response?.ok) return null;
+    return response.json().catch((): RunsResponse => ({})) as Promise<RunsResponse>;
+  }
+
+  private async pollViaDirectHermes(): Promise<RunsResponse | null> {
+    if (!this.config.hermesApiUrl || !this.config.hermesApiKey) return null;
     const baseUrl = this.config.hermesApiUrl.replace(/\/$/, '');
     const health = await fetch(`${baseUrl}/v1/health`, {
       headers: { Authorization: `Bearer ${this.config.hermesApiKey}` },
     }).catch(() => null);
-    if (!health?.ok) return;
+    if (!health?.ok) return null;
 
     const url = new URL(`${baseUrl}/v1/runs`);
     url.searchParams.set('session_key', this.config.hermesSessionKey || 'nitro-tech-jay');
@@ -74,17 +103,23 @@ export class TelegramSyncService {
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${this.config.hermesApiKey}` },
     }).catch(() => null);
-    if (!response?.ok) return;
+    if (!response?.ok) return null;
 
-    const payload = await response.json().catch((): RunsResponse => ({})) as RunsResponse;
+    return response.json().catch((): RunsResponse => ({})) as Promise<RunsResponse>;
+  }
+
+  private processRunsResponse(payload: RunsResponse): void {
     const messages = payload.messages ?? [];
     messages
       .filter(message => message.source === 'telegram' && message.role === 'user')
       .forEach(message => {
         const timestamp = message.timestamp ?? message.created_at ?? Date.now();
+        const id = message.id || `telegram-${timestamp}-${message.text || message.content || ''}`;
+        if (this.seenMessageIds.has(id)) return;
+        this.seenMessageIds.add(id);
         this.lastSeenAt = Math.max(this.lastSeenAt, timestamp);
         this.onNewMessage?.({
-          id: message.id || `telegram-${timestamp}`,
+          id,
           sender: message.sender || 'Jay (Telegram 📱)',
           avatar: '📱',
           text: message.text || message.content || '',

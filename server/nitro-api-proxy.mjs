@@ -100,6 +100,27 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/hermes/runs') {
+      if (!HERMES_API_URL || HERMES_API_URL.startsWith('/')) {
+        sendJson(response, 503, { error: { message: 'Hermes is not configured.' } });
+        return;
+      }
+      const runsUrl = new URL(`${HERMES_API_URL}/v1/runs`);
+      const sessionKey = url.searchParams.get('session_key') || HERMES_SESSION_KEY;
+      runsUrl.searchParams.set('session_key', sessionKey);
+      for (const [key, value] of url.searchParams.entries()) {
+        if (key !== 'session_key') runsUrl.searchParams.set(key, value);
+      }
+      await proxyJson(response, runsUrl.toString(), {
+        method: 'GET',
+        headers: {
+          ...hermesHeaders(),
+          'X-Hermes-Session-Key': sessionKey,
+        },
+      }, 'Hermes is not configured.');
+      return;
+    }
+
     if (request.method === 'POST' && url.pathname === '/api/mimo/chat') {
       await proxyJson(response, `${MIMO_API_URL}/chat/completions`, {
         method: 'POST',
