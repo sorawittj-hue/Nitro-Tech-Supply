@@ -447,6 +447,9 @@ async function materializeBusinessActions(command, hermesForward, agentRun) {
   if (command.type === 'purchase.order.draft') {
     return materializePurchaseOrderDraft(command, hermesForward, agentRun);
   }
+  if (command.type === 'quote.draft') {
+    return materializeQuoteDraft(command, hermesForward, agentRun);
+  }
   if (command.type !== 'agent.task.assign') return [];
   if (typeof command.agentId !== 'string' || typeof command.title !== 'string') return [];
 
@@ -500,6 +503,64 @@ async function materializeBusinessActions(command, hermesForward, agentRun) {
     id: taskId,
     status: 'created',
     detail: detailParts.join(' '),
+  }];
+}
+
+async function materializeQuoteDraft(command, hermesForward, agentRun) {
+  if (typeof command.customerId !== 'string' || typeof command.totalValue !== 'number' || typeof command.grossMargin !== 'number') return [];
+
+  const customerId = command.customerId.trim();
+  const quoteId = typeof command.quoteId === 'string' && command.quoteId.trim()
+    ? command.quoteId.trim()
+    : makeQuoteId(agentRun?.id);
+  const description = typeof command.description === 'string' && command.description.trim()
+    ? command.description.trim()
+    : typeof command.title === 'string' && command.title.trim()
+      ? command.title.trim()
+      : 'Hermes drafted quote';
+  const customer = await fetchJsonData(`/customers/${encodeURIComponent(customerId)}`);
+  if (!customer || typeof customer.id !== 'string') {
+    throw new Error(`Customer ${customerId} was not found. Create the customer before drafting this quote.`);
+  }
+  const marginGuard = command.grossMargin < 0.1
+    ? 'Margin below 10%. CEO review recommended before sending.'
+    : 'Margin guard passed.';
+  const payload = {
+    id: quoteId,
+    customerId,
+    status: 'Draft',
+    description,
+    totalValue: command.totalValue,
+    grossMargin: command.grossMargin,
+    createdAt: new Date().toISOString(),
+    validUntil: typeof command.validUntil === 'string' ? command.validUntil : undefined,
+  };
+
+  const existingQuotes = await fetchJsonData(`/quotes?id=${encodeURIComponent(quoteId)}`);
+  const existing = Array.isArray(existingQuotes) && existingQuotes.length > 0 ? existingQuotes[0] : null;
+  if (existing && typeof existing.id === 'string') {
+    await writeDataRecord(`/quotes/${encodeURIComponent(existing.id)}`, 'PATCH', {
+      customerId: payload.customerId,
+      status: payload.status,
+      description: payload.description,
+      totalValue: payload.totalValue,
+      grossMargin: payload.grossMargin,
+      validUntil: payload.validUntil,
+    });
+    return [{
+      type: 'quote',
+      id: quoteId,
+      status: 'updated',
+      detail: `Updated draft quote for customer ${customerId}. ${marginGuard}`,
+    }];
+  }
+
+  await writeDataRecord('/quotes', 'POST', payload);
+  return [{
+    type: 'quote',
+    id: quoteId,
+    status: 'created',
+    detail: `Created draft quote for customer ${customerId}. Total THB ${command.totalValue}. Gross margin ${(command.grossMargin * 100).toFixed(1)}%. ${marginGuard} Hermes: ${(hermesForward.result || '').slice(0, 240)}`,
   }];
 }
 
@@ -614,6 +675,7 @@ function shouldForwardTransportCommand(type) {
     || type === 'agent.skill.update'
     || type === 'chat.send'
     || type === 'purchase.order.draft'
+    || type === 'quote.draft'
     || type === 'diagnostics.request';
 }
 
@@ -642,9 +704,14 @@ function formatTransportCommandForHermes(command) {
   appendIfString(lines, 'text', command.text);
   appendIfString(lines, 'sessionKey', command.sessionKey);
   appendIfString(lines, 'supplierId', command.supplierId);
+  appendIfString(lines, 'customerId', command.customerId);
+  appendIfString(lines, 'quoteId', command.quoteId);
   appendIfString(lines, 'description', command.description);
   appendIfString(lines, 'expectedAt', command.expectedAt);
+  appendIfString(lines, 'validUntil', command.validUntil);
   if (typeof command.totalCost === 'number') lines.push(`totalCost: ${command.totalCost}`);
+  if (typeof command.totalValue === 'number') lines.push(`totalValue: ${command.totalValue}`);
+  if (typeof command.grossMargin === 'number') lines.push(`grossMargin: ${command.grossMargin}`);
 
   if (command.type === 'agent.skill.update') {
     lines.push(`individualSkillUpdated: ${typeof command.individualSkill === 'string'}`);
@@ -703,6 +770,18 @@ function parseTransportCommand(rawBody) {
     }
   }
 
+  if (type === 'quote.draft') {
+    if (typeof value.customerId !== 'string' || !value.customerId.trim()) {
+      return { ok: false, message: 'quote.draft requires customerId.' };
+    }
+    if (typeof value.totalValue !== 'number' || !Number.isFinite(value.totalValue) || value.totalValue < 0) {
+      return { ok: false, message: 'quote.draft requires non-negative totalValue.' };
+    }
+    if (typeof value.grossMargin !== 'number' || !Number.isFinite(value.grossMargin) || value.grossMargin < 0 || value.grossMargin > 1) {
+      return { ok: false, message: 'quote.draft requires grossMargin between 0 and 1.' };
+    }
+  }
+
   return { ok: true, value };
 }
 
@@ -714,6 +793,7 @@ function isAllowedTransportCommandType(type) {
     || type === 'chat.send'
     || type === 'layout.save'
     || type === 'purchase.order.draft'
+    || type === 'quote.draft'
     || type === 'diagnostics.request';
 }
 
@@ -722,7 +802,9 @@ function summarizeTransportCommand(command) {
   if (typeof command.agentId === 'string') parts.push(`agent=${command.agentId}`);
   if (typeof command.taskId === 'string') parts.push(`task=${command.taskId}`);
   if (typeof command.purchaseOrderId === 'string') parts.push(`po=${command.purchaseOrderId}`);
+  if (typeof command.quoteId === 'string') parts.push(`quote=${command.quoteId}`);
   if (typeof command.supplierId === 'string') parts.push(`supplier=${command.supplierId}`);
+  if (typeof command.customerId === 'string') parts.push(`customer=${command.customerId}`);
   if (typeof command.title === 'string') parts.push(`title=${command.title.slice(0, 120)}`);
   if (typeof command.description === 'string') parts.push(`description=${command.description.slice(0, 120)}`);
   return parts.join(' ');
@@ -738,6 +820,10 @@ function makeAgentTaskId(runId) {
 
 function makePurchaseOrderId(runId) {
   return `po-${runId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`;
+}
+
+function makeQuoteId(runId) {
+  return `quote-${runId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`;
 }
 
 function readBody(request) {
