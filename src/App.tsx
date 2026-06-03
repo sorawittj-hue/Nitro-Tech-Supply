@@ -39,6 +39,7 @@ export default function App() {
     currentTime,
     aiApiKey,
     aiModel,
+    auditLog,
     setSharedSkillText,
     setSelectedAgent,
     setActivePanel,
@@ -187,6 +188,7 @@ export default function App() {
                   {activePanel === 'console' && (
                     <SystemConsole
                       logs={logs as ConsoleLog[]}
+                      auditLogs={auditLog}
                       onClearLogs={() => setLogs([])}
                       onRequestDiagnostics={() => {
                         transport.send({ type: 'diagnostics.request', timestamp: Date.now() });

@@ -8,6 +8,7 @@ import { useAgentEvents } from '../hooks/useAgentEvents';
 import { transport } from '../transport';
 import {
   parseAffiliateData,
+  parseAuditLogData,
   parseClaimData,
   parseCompanyAgentTaskData,
   parseCustomerData,
@@ -167,6 +168,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         shipmentData,
         claimData,
         agentTaskData,
+        auditLogData,
       ] = await Promise.all([
         fetchJson(`${apiBase}/inventory`, parseInventoryData, 'Inventory'),
         fetchJson(`${apiBase}/orders`, parseOrderData, 'Orders'),
@@ -181,6 +183,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchJson(`${apiBase}/shipments`, parseShipmentData, 'Shipments'),
         fetchJson(`${apiBase}/claims`, parseClaimData, 'Claims'),
         fetchJson(`${apiBase}/agentTasks`, parseCompanyAgentTaskData, 'Agent tasks'),
+        fetchJson(`${apiBase}/auditLogs`, parseAuditLogData, 'Audit logs'),
       ]);
 
       setInventory(invData);
@@ -196,6 +199,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setShipments(shipmentData);
       setClaims(claimData);
       setCompanyAgentTasks(agentTaskData);
+      setAuditLog(auditLogData.slice(-200));
       setIsOffline(false);
       
       const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -216,6 +220,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setShipments([]);
       setClaims([]);
       setCompanyAgentTasks([]);
+      setAuditLog([]);
       
       const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
       setLastUpdated(`${ts} (Offline)`);

@@ -1,5 +1,6 @@
 import type {
   AffiliateData,
+  AuditEntry,
   ClaimRecord,
   CompanyAgentTask,
   CustomerRecord,
@@ -216,6 +217,22 @@ export function parseCompanyAgentTaskData(value: unknown): CompanyAgentTask[] {
       source: readEnum(task, 'source', ['ceo', 'hermes', 'system'], `agentTasks[${index}].source`),
       createdAt: readString(task, 'createdAt', `agentTasks[${index}].createdAt`),
       dueAt: readOptionalString(task, 'dueAt', `agentTasks[${index}].dueAt`),
+    };
+  });
+}
+
+export function parseAuditLogData(value: unknown): AuditEntry[] {
+  if (!Array.isArray(value)) throw new Error('Audit logs payload must be an array.');
+  return value.map((entry, index) => {
+    if (!isRecord(entry)) throw new Error(`Audit log ${index} must be an object.`);
+    return {
+      id: readString(entry, 'id', `auditLogs[${index}].id`),
+      timestamp: readString(entry, 'timestamp', `auditLogs[${index}].timestamp`),
+      action: readString(entry, 'action', `auditLogs[${index}].action`),
+      detail: readString(entry, 'detail', `auditLogs[${index}].detail`),
+      method: readOptionalString(entry, 'method', `auditLogs[${index}].method`),
+      status: readOptionalNumber(entry, 'status', `auditLogs[${index}].status`),
+      sourceIp: readOptionalString(entry, 'sourceIp', `auditLogs[${index}].sourceIp`),
     };
   });
 }

@@ -143,6 +143,9 @@ export interface AuditEntry {
   timestamp: string;
   action: string;
   detail: string;
+  method?: string;
+  status?: number;
+  sourceIp?: string;
 }
 
 export interface ToastItem {
