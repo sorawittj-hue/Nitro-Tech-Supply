@@ -462,8 +462,14 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
             {agentRuns.length === 0 ? (
               <span className="muted-line">No CEO command receipts yet.</span>
             ) : agentRuns.slice(-5).reverse().map(run => (
-              <div key={run.id} className="compact-row">
-                <span>{run.title || run.commandType}</span>
+              <div key={run.id} className="compact-row command-receipt-row">
+                <span>
+                  <strong>{run.title || run.commandType}</strong>
+                  <small>{run.agentId || run.commandType} • {formatTime(run.updatedAt)}</small>
+                  {run.result ? <em>{truncateText(run.result, 110)}</em> : null}
+                  {!run.result && run.errorMessage ? <em>{truncateText(run.errorMessage, 110)}</em> : null}
+                  {run.evidence && run.evidence.length > 0 ? <small>{run.evidence[0]}</small> : null}
+                </span>
                 <strong>{run.status.toUpperCase()}</strong>
               </div>
             ))}
@@ -531,6 +537,17 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
       </div>
     </div>
   );
+}
+
+function truncateText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function formatTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 }
 
 function MetricCard({ label, value, sub, tone }: { label: string; value: string; sub: string; tone: 'green' | 'cyan' | 'amber' | 'red' | 'violet' }) {

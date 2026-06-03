@@ -152,6 +152,10 @@ export interface AgentRunRecord {
   createdAt: string;
   updatedAt: string;
   detail?: string;
+  result?: string;
+  evidence?: string[];
+  completedAt?: string;
+  errorMessage?: string;
 }
 
 export interface AuditEntry {

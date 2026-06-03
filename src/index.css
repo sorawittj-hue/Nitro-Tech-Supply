@@ -2615,6 +2615,34 @@ body {
   white-space: nowrap;
 }
 
+.command-receipt-row {
+  align-items: flex-start;
+}
+
+.command-receipt-row span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  white-space: normal;
+}
+
+.command-receipt-row span > strong {
+  color: var(--text-primary);
+  white-space: normal;
+}
+
+.command-receipt-row small {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.command-receipt-row em {
+  color: var(--accent-cyan);
+  font-style: normal;
+  line-height: 1.35;
+}
+
 /* ========================================
    BUSINESS OPS
    ======================================== */

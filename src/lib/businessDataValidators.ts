@@ -239,6 +239,10 @@ export function parseAgentRunData(value: unknown): AgentRunRecord[] {
       createdAt: readString(run, 'createdAt', `agentRuns[${index}].createdAt`),
       updatedAt: readString(run, 'updatedAt', `agentRuns[${index}].updatedAt`),
       detail: readOptionalString(run, 'detail', `agentRuns[${index}].detail`),
+      result: readOptionalString(run, 'result', `agentRuns[${index}].result`),
+      evidence: readOptionalStringArray(run, 'evidence', `agentRuns[${index}].evidence`),
+      completedAt: readOptionalString(run, 'completedAt', `agentRuns[${index}].completedAt`),
+      errorMessage: readOptionalString(run, 'errorMessage', `agentRuns[${index}].errorMessage`),
     };
   });
 }
@@ -289,6 +293,16 @@ function readOptionalBoolean(record: Record<string, unknown>, key: string, label
   if (value === undefined || value === null) return undefined;
   if (typeof value !== 'boolean') throw new Error(`${label} must be a boolean when provided.`);
   return value;
+}
+
+function readOptionalStringArray(record: Record<string, unknown>, key: string, label: string): string[] | undefined {
+  const value = record[key];
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array when provided.`);
+  return value.map((item, index) => {
+    if (typeof item !== 'string') throw new Error(`${label}[${index}] must be a string.`);
+    return item;
+  });
 }
 
 function readOptionalString(record: Record<string, unknown>, key: string, label: string): string | undefined {

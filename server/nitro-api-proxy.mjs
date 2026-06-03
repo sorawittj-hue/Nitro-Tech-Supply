@@ -181,6 +181,10 @@ const server = http.createServer(async (request, response) => {
           status: normalizeAgentRunStatus(hermesForward.status),
           hermesForwarded: hermesForward.forwarded,
           hermesStatus: hermesForward.status,
+          result: hermesForward.result,
+          evidence: hermesForward.evidence,
+          completedAt: hermesForward.forwarded ? new Date().toISOString() : undefined,
+          errorMessage: hermesForward.errorMessage,
           updatedAt: new Date().toISOString(),
         }).catch(error => {
           console.warn(`Failed to update agent run ${agentRun.id}: ${error instanceof Error ? error.message : String(error)}`);
@@ -193,6 +197,8 @@ const server = http.createServer(async (request, response) => {
         type: command.value.type,
         hermesForwarded: hermesForward.forwarded,
         hermesStatus: hermesForward.status,
+        result: hermesForward.result ?? null,
+        evidence: hermesForward.evidence ?? [],
       });
       return;
     }
@@ -279,11 +285,11 @@ async function proxyJson(response, url, init, missingConfigMessage) {
 
 async function forwardTransportCommandToHermes(command) {
   if (!shouldForwardTransportCommand(command.type)) {
-    return { forwarded: false, status: 'not_forwardable' };
+    return { forwarded: false, status: 'not_forwardable', evidence: ['Command type is not configured for Hermes forwarding.'] };
   }
 
   if (!HERMES_API_URL || HERMES_API_URL.startsWith('/')) {
-    return { forwarded: false, status: 'not_configured' };
+    return { forwarded: false, status: 'not_configured', evidence: ['HERMES_API_URL is not configured on the Nitro proxy.'] };
   }
 
   const controller = new AbortController();
@@ -315,17 +321,69 @@ async function forwardTransportCommandToHermes(command) {
     });
 
     const status = response.ok ? 'forwarded' : `hermes_${response.status}`;
+    const text = await response.text().catch(() => '');
     if (!response.ok) {
-      const text = await response.text().catch(() => '');
       console.warn(`Hermes transport forward failed: ${response.status} ${text.slice(0, 300)}`);
+      return {
+        forwarded: false,
+        status,
+        errorMessage: extractErrorMessage(text) ?? `Hermes returned HTTP ${response.status}.`,
+        evidence: [
+          `POST ${HERMES_API_URL}/v1/chat/completions`,
+          `HTTP ${response.status}`,
+        ],
+      };
     }
-    return { forwarded: response.ok, status };
+    const result = extractOpenAiMessageContent(text);
+    return {
+      forwarded: true,
+      status,
+      result,
+      evidence: [
+        `POST ${HERMES_API_URL}/v1/chat/completions`,
+        `session ${HERMES_SESSION_KEY}`,
+        result ? 'assistant response captured' : 'assistant response empty',
+      ],
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`Hermes transport forward failed: ${message}`);
-    return { forwarded: false, status: 'forward_failed' };
+    return {
+      forwarded: false,
+      status: 'forward_failed',
+      errorMessage: message,
+      evidence: [`Hermes forward exception: ${message}`],
+    };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+function extractOpenAiMessageContent(text) {
+  if (!text.trim()) return undefined;
+  try {
+    const payload = JSON.parse(text);
+    const firstChoice = Array.isArray(payload.choices) ? payload.choices[0] : undefined;
+    const content = firstChoice?.message?.content;
+    if (typeof content === 'string' && content.trim()) return content.trim();
+    const textContent = firstChoice?.text;
+    if (typeof textContent === 'string' && textContent.trim()) return textContent.trim();
+    return undefined;
+  } catch (error) {
+    console.warn(`Unable to parse Hermes response JSON: ${error instanceof Error ? error.message : String(error)}`);
+    return text.slice(0, 2_000);
+  }
+}
+
+function extractErrorMessage(text) {
+  if (!text.trim()) return undefined;
+  try {
+    const payload = JSON.parse(text);
+    if (typeof payload.error?.message === 'string') return payload.error.message;
+    if (typeof payload.message === 'string') return payload.message;
+    return undefined;
+  } catch {
+    return text.slice(0, 500);
   }
 }
 
