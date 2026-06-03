@@ -314,7 +314,7 @@ function readOptionalBusinessActions(record: Record<string, unknown>, key: strin
   return value.map((item, index) => {
     if (!isRecord(item)) throw new Error(`${label}[${index}] must be an object.`);
     return {
-      type: readEnum(item, 'type', ['agent_task', 'purchase_order', 'quote'], `${label}[${index}].type`),
+      type: readEnum(item, 'type', ['agent_task', 'purchase_order', 'quote', 'invoice'], `${label}[${index}].type`),
       id: readString(item, 'id', `${label}[${index}].id`),
       status: readEnum(item, 'status', ['created', 'updated', 'failed'], `${label}[${index}].status`),
       detail: readString(item, 'detail', `${label}[${index}].detail`),

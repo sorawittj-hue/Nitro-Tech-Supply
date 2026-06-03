@@ -450,6 +450,9 @@ async function materializeBusinessActions(command, hermesForward, agentRun) {
   if (command.type === 'quote.draft') {
     return materializeQuoteDraft(command, hermesForward, agentRun);
   }
+  if (command.type === 'invoice.draft') {
+    return materializeInvoiceDraft(command, hermesForward, agentRun);
+  }
   if (command.type !== 'agent.task.assign') return [];
   if (typeof command.agentId !== 'string' || typeof command.title !== 'string') return [];
 
@@ -503,6 +506,64 @@ async function materializeBusinessActions(command, hermesForward, agentRun) {
     id: taskId,
     status: 'created',
     detail: detailParts.join(' '),
+  }];
+}
+
+async function materializeInvoiceDraft(command, hermesForward, agentRun) {
+  if (typeof command.customerId !== 'string' || typeof command.amount !== 'number' || typeof command.dueDate !== 'string') return [];
+
+  const customerId = command.customerId.trim();
+  const invoiceId = typeof command.invoiceId === 'string' && command.invoiceId.trim()
+    ? command.invoiceId.trim()
+    : makeInvoiceId(agentRun?.id);
+  const description = typeof command.description === 'string' && command.description.trim()
+    ? command.description.trim()
+    : typeof command.title === 'string' && command.title.trim()
+      ? command.title.trim()
+      : 'Hermes drafted invoice';
+  const customer = await fetchJsonData(`/customers/${encodeURIComponent(customerId)}`);
+  if (!customer || typeof customer.id !== 'string') {
+    throw new Error(`Customer ${customerId} was not found. Create the customer before drafting this invoice.`);
+  }
+
+  const payload = {
+    id: invoiceId,
+    customerId,
+    orderId: typeof command.orderId === 'string' ? command.orderId : undefined,
+    status: 'Draft',
+    description,
+    amount: command.amount,
+    paidAmount: 0,
+    dueDate: command.dueDate,
+    issuedAt: undefined,
+  };
+
+  const existingInvoices = await fetchJsonData(`/invoices?id=${encodeURIComponent(invoiceId)}`);
+  const existing = Array.isArray(existingInvoices) && existingInvoices.length > 0 ? existingInvoices[0] : null;
+  if (existing && typeof existing.id === 'string') {
+    await writeDataRecord(`/invoices/${encodeURIComponent(existing.id)}`, 'PATCH', {
+      customerId: payload.customerId,
+      orderId: payload.orderId,
+      status: payload.status,
+      description: payload.description,
+      amount: payload.amount,
+      paidAmount: 0,
+      dueDate: payload.dueDate,
+    });
+    return [{
+      type: 'invoice',
+      id: invoiceId,
+      status: 'updated',
+      detail: `Updated draft invoice for customer ${customerId}. Amount THB ${command.amount}.`,
+    }];
+  }
+
+  await writeDataRecord('/invoices', 'POST', payload);
+  return [{
+    type: 'invoice',
+    id: invoiceId,
+    status: 'created',
+    detail: `Created draft invoice for customer ${customerId}. Amount THB ${command.amount}. Not issued to customer. Hermes: ${(hermesForward.result || '').slice(0, 240)}`,
   }];
 }
 
@@ -676,6 +737,7 @@ function shouldForwardTransportCommand(type) {
     || type === 'chat.send'
     || type === 'purchase.order.draft'
     || type === 'quote.draft'
+    || type === 'invoice.draft'
     || type === 'diagnostics.request';
 }
 
@@ -706,12 +768,16 @@ function formatTransportCommandForHermes(command) {
   appendIfString(lines, 'supplierId', command.supplierId);
   appendIfString(lines, 'customerId', command.customerId);
   appendIfString(lines, 'quoteId', command.quoteId);
+  appendIfString(lines, 'invoiceId', command.invoiceId);
+  appendIfString(lines, 'orderId', command.orderId);
   appendIfString(lines, 'description', command.description);
   appendIfString(lines, 'expectedAt', command.expectedAt);
   appendIfString(lines, 'validUntil', command.validUntil);
+  appendIfString(lines, 'dueDate', command.dueDate);
   if (typeof command.totalCost === 'number') lines.push(`totalCost: ${command.totalCost}`);
   if (typeof command.totalValue === 'number') lines.push(`totalValue: ${command.totalValue}`);
   if (typeof command.grossMargin === 'number') lines.push(`grossMargin: ${command.grossMargin}`);
+  if (typeof command.amount === 'number') lines.push(`amount: ${command.amount}`);
 
   if (command.type === 'agent.skill.update') {
     lines.push(`individualSkillUpdated: ${typeof command.individualSkill === 'string'}`);
@@ -782,6 +848,18 @@ function parseTransportCommand(rawBody) {
     }
   }
 
+  if (type === 'invoice.draft') {
+    if (typeof value.customerId !== 'string' || !value.customerId.trim()) {
+      return { ok: false, message: 'invoice.draft requires customerId.' };
+    }
+    if (typeof value.amount !== 'number' || !Number.isFinite(value.amount) || value.amount <= 0) {
+      return { ok: false, message: 'invoice.draft requires positive amount.' };
+    }
+    if (typeof value.dueDate !== 'string' || !value.dueDate.trim()) {
+      return { ok: false, message: 'invoice.draft requires dueDate.' };
+    }
+  }
+
   return { ok: true, value };
 }
 
@@ -794,6 +872,7 @@ function isAllowedTransportCommandType(type) {
     || type === 'layout.save'
     || type === 'purchase.order.draft'
     || type === 'quote.draft'
+    || type === 'invoice.draft'
     || type === 'diagnostics.request';
 }
 
@@ -803,6 +882,7 @@ function summarizeTransportCommand(command) {
   if (typeof command.taskId === 'string') parts.push(`task=${command.taskId}`);
   if (typeof command.purchaseOrderId === 'string') parts.push(`po=${command.purchaseOrderId}`);
   if (typeof command.quoteId === 'string') parts.push(`quote=${command.quoteId}`);
+  if (typeof command.invoiceId === 'string') parts.push(`invoice=${command.invoiceId}`);
   if (typeof command.supplierId === 'string') parts.push(`supplier=${command.supplierId}`);
   if (typeof command.customerId === 'string') parts.push(`customer=${command.customerId}`);
   if (typeof command.title === 'string') parts.push(`title=${command.title.slice(0, 120)}`);
@@ -824,6 +904,10 @@ function makePurchaseOrderId(runId) {
 
 function makeQuoteId(runId) {
   return `quote-${runId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`;
+}
+
+function makeInvoiceId(runId) {
+  return `inv-${runId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`;
 }
 
 function readBody(request) {

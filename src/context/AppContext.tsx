@@ -141,7 +141,7 @@ export interface CompanyAgentTask {
 export type AgentRunStatus = 'accepted' | 'forwarded' | 'not_forwardable' | 'not_configured' | 'forward_failed' | 'failed';
 
 export interface AgentRunBusinessAction {
-  type: 'agent_task' | 'purchase_order' | 'quote';
+  type: 'agent_task' | 'purchase_order' | 'quote' | 'invoice';
   id: string;
   status: 'created' | 'updated' | 'failed';
   detail: string;

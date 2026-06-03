@@ -120,6 +120,7 @@ function statusTone(status: AgentRunRecord['status']): string {
 function formatActionType(type: AgentRunBusinessAction['type']): string {
   if (type === 'purchase_order') return 'purchase_order';
   if (type === 'quote') return 'quote';
+  if (type === 'invoice') return 'invoice';
   return 'agent_task';
 }
 
