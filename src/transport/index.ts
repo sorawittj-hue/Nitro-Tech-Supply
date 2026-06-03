@@ -1,4 +1,5 @@
 import { WebSocketTransport } from './webSocketTransport';
+import { HttpCommandTransport } from './httpCommandTransport';
 import type { MessageTransport } from './types';
 
 class OfflineTransport implements MessageTransport {
@@ -22,7 +23,15 @@ class OfflineTransport implements MessageTransport {
 
 const wsUrl = import.meta.env.VITE_WS_URL || '';
 const wsToken = import.meta.env.VITE_WS_TOKEN || '';
+const httpBaseUrl = import.meta.env.VITE_NITRO_PROXY_URL || (import.meta.env.DEV ? 'http://localhost:8787' : getBrowserOrigin());
 
 export const transport: MessageTransport = wsUrl
   ? new WebSocketTransport(wsUrl, wsToken)
+  : httpBaseUrl
+  ? new HttpCommandTransport(httpBaseUrl)
   : new OfflineTransport();
+
+function getBrowserOrigin(): string {
+  if (typeof window === 'undefined') return '';
+  return window.location.origin;
+}

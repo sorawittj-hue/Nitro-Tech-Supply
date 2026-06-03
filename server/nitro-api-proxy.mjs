@@ -112,6 +112,51 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === 'POST' && url.pathname === '/api/transport/messages') {
+      if (!canWriteData(request)) {
+        const status = DATA_WRITE_TOKEN ? 401 : 503;
+        writeAuditLog({
+          request,
+          action: 'Transport Command Rejected',
+          detail: `POST ${url.pathname} rejected with ${status}`,
+          status,
+        });
+        sendJson(response, status, {
+          error: {
+            message: DATA_WRITE_TOKEN
+              ? 'Missing or invalid Nitro write token.'
+              : 'Nitro data write token is required but not configured.',
+          },
+        });
+        return;
+      }
+
+      const command = parseTransportCommand(await readBody(request));
+      if (!command.ok) {
+        writeAuditLog({
+          request,
+          action: 'Transport Command Rejected',
+          detail: command.message,
+          status: 400,
+        });
+        sendJson(response, 400, { error: { message: command.message } });
+        return;
+      }
+
+      writeAuditLog({
+        request,
+        action: 'Transport Command Accepted',
+        detail: summarizeTransportCommand(command.value),
+        status: 202,
+      });
+      sendJson(response, 202, {
+        ok: true,
+        acceptedAt: new Date().toISOString(),
+        type: command.value.type,
+      });
+      return;
+    }
+
     if (isDataEndpoint(url.pathname)) {
       if (!canWriteData(request)) {
         const status = DATA_WRITE_TOKEN ? 401 : 503;
@@ -195,6 +240,56 @@ async function proxyJson(response, url, init, missingConfigMessage) {
 function sendJson(response, status, payload) {
   response.writeHead(status, { 'Content-Type': 'application/json' });
   response.end(JSON.stringify(payload));
+}
+
+function parseTransportCommand(rawBody) {
+  let value;
+  try {
+    value = JSON.parse(rawBody);
+  } catch {
+    return { ok: false, message: 'Transport command body must be valid JSON.' };
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ok: false, message: 'Transport command body must be an object.' };
+  }
+
+  const type = value.type;
+  if (!isAllowedTransportCommandType(type)) {
+    return { ok: false, message: `Unsupported transport command type: ${String(type || 'missing')}.` };
+  }
+
+  if (type.startsWith('agent.') && typeof value.agentId !== 'string') {
+    return { ok: false, message: `${type} requires agentId.` };
+  }
+
+  if (type === 'agent.task.assign' && typeof value.title !== 'string') {
+    return { ok: false, message: 'agent.task.assign requires title.' };
+  }
+
+  if (type === 'chat.send' && typeof value.text !== 'string') {
+    return { ok: false, message: 'chat.send requires text.' };
+  }
+
+  return { ok: true, value };
+}
+
+function isAllowedTransportCommandType(type) {
+  return type === 'webview.ready'
+    || type === 'agent.wake'
+    || type === 'agent.task.assign'
+    || type === 'agent.skill.update'
+    || type === 'chat.send'
+    || type === 'layout.save'
+    || type === 'diagnostics.request';
+}
+
+function summarizeTransportCommand(command) {
+  const parts = [command.type];
+  if (typeof command.agentId === 'string') parts.push(`agent=${command.agentId}`);
+  if (typeof command.taskId === 'string') parts.push(`task=${command.taskId}`);
+  if (typeof command.title === 'string') parts.push(`title=${command.title.slice(0, 120)}`);
+  return parts.join(' ');
 }
 
 function readBody(request) {
