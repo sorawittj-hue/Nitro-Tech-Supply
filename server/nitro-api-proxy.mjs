@@ -149,10 +149,13 @@ const server = http.createServer(async (request, response) => {
         detail: summarizeTransportCommand(command.value),
         status: 202,
       });
+      const hermesForward = await forwardTransportCommandToHermes(command.value);
       sendJson(response, 202, {
         ok: true,
         acceptedAt: new Date().toISOString(),
         type: command.value.type,
+        hermesForwarded: hermesForward.forwarded,
+        hermesStatus: hermesForward.status,
       });
       return;
     }
@@ -235,6 +238,105 @@ async function proxyJson(response, url, init, missingConfigMessage) {
   });
   response.end(text);
   return { status: upstream.status, contentType, text };
+}
+
+async function forwardTransportCommandToHermes(command) {
+  if (!shouldForwardTransportCommand(command.type)) {
+    return { forwarded: false, status: 'not_forwardable' };
+  }
+
+  if (!HERMES_API_URL || HERMES_API_URL.startsWith('/')) {
+    return { forwarded: false, status: 'not_configured' };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+
+  try {
+    const response = await fetch(`${HERMES_API_URL}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        ...hermesHeaders(),
+        'Content-Type': 'application/json',
+        'X-Hermes-Session-Key': HERMES_SESSION_KEY,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: 'hermes-agent',
+        messages: [
+          {
+            role: 'system',
+            content: nitroTransportSystemPrompt(),
+          },
+          {
+            role: 'user',
+            content: formatTransportCommandForHermes(command),
+          },
+        ],
+        stream: false,
+      }),
+    });
+
+    const status = response.ok ? 'forwarded' : `hermes_${response.status}`;
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      console.warn(`Hermes transport forward failed: ${response.status} ${text.slice(0, 300)}`);
+    }
+    return { forwarded: response.ok, status };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Hermes transport forward failed: ${message}`);
+    return { forwarded: false, status: 'forward_failed' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function shouldForwardTransportCommand(type) {
+  return type === 'agent.wake'
+    || type === 'agent.task.assign'
+    || type === 'agent.skill.update'
+    || type === 'chat.send'
+    || type === 'diagnostics.request';
+}
+
+function nitroTransportSystemPrompt() {
+  return [
+    'You are Hermes Agent, the company brain for Nitro Tech Supply.',
+    'The CEO is Jay / Sorawit. Treat dashboard transport commands as real company operating events.',
+    'Route the command to the most appropriate Nitro agent from swarm.yaml.',
+    'Respect approval gates: purchases above THB 50,000, destructive changes, external messages, credential changes, and production deploys need CEO approval.',
+    'Reply internally and concisely as AgentName (Title): action, risk, next step.',
+  ].join('\n');
+}
+
+function formatTransportCommandForHermes(command) {
+  const lines = [
+    'Nitro dashboard transport command received.',
+    `type: ${command.type}`,
+  ];
+
+  appendIfString(lines, 'agentId', command.agentId);
+  appendIfString(lines, 'taskId', command.taskId);
+  appendIfString(lines, 'title', command.title);
+  appendIfString(lines, 'detail', command.detail);
+  appendIfString(lines, 'priority', command.priority);
+  appendIfString(lines, 'source', command.source);
+  appendIfString(lines, 'text', command.text);
+  appendIfString(lines, 'sessionKey', command.sessionKey);
+
+  if (command.type === 'agent.skill.update') {
+    lines.push(`individualSkillUpdated: ${typeof command.individualSkill === 'string'}`);
+    lines.push(`sharedSkillUpdated: ${typeof command.sharedSkill === 'string'}`);
+  }
+
+  return lines.join('\n');
+}
+
+function appendIfString(lines, label, value) {
+  if (typeof value === 'string' && value.trim()) {
+    lines.push(`${label}: ${value.slice(0, 1000)}`);
+  }
 }
 
 function sendJson(response, status, payload) {
