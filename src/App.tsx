@@ -10,6 +10,7 @@ import { ActiveOrders } from './components/ActiveOrders';
 import { CompanyCapital } from './components/CompanyCapital';
 import { BusinessCommandCenter } from './components/BusinessCommandCenter';
 import { BusinessOps } from './components/BusinessOps';
+import { AgentRunsView } from './components/AgentRunsView';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastContainer } from './components/ToastContainer';
 import { SearchBar } from './components/SearchBar';
@@ -60,6 +61,8 @@ export default function App() {
     debugMode,
     dataWriteToken,
     nitroHealth,
+    agentRuns,
+    refreshAllData,
     setChatProvider,
     setHermesConfig,
     setDebugMode,
@@ -171,7 +174,7 @@ export default function App() {
             debugMode={debugMode}
           />
 
-          {activePanel !== 'none' && activePanel !== 'analytics' && activePanel !== 'settings' && activePanel !== 'command' && activePanel !== 'ops' && (
+          {activePanel !== 'none' && activePanel !== 'analytics' && activePanel !== 'settings' && activePanel !== 'command' && activePanel !== 'ops' && activePanel !== 'runs' && (
             <>
               <div className="side-panel-overlay" onClick={() => setActivePanel('none')} />
               <div className="side-panel">
@@ -260,6 +263,21 @@ export default function App() {
                 </div>
                 <div className="side-panel-body">
                   <BusinessOps agents={agents} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {activePanel === 'runs' && (
+            <>
+              <div className="side-panel-overlay" onClick={() => setActivePanel('none')} />
+              <div className="side-panel" style={{ width: '92vw', maxWidth: '1280px' }}>
+                <div className="side-panel-header">
+                  <h2>HERMES AGENT RUNS</h2>
+                  <button className="side-panel-close" onClick={() => setActivePanel('none')}>x</button>
+                </div>
+                <div className="side-panel-body">
+                  <AgentRunsView runs={agentRuns} agents={agents} onRefresh={refreshAllData} />
                 </div>
               </div>
             </>
@@ -490,6 +508,11 @@ export default function App() {
 
           <button className={`dock-item ${activePanel === 'ops' ? 'active' : ''}`} onClick={() => togglePanel('ops')}>
             <span className="dock-item-icon">🏭</span><span>Ops</span>
+          </button>
+
+          <button className={`dock-item ${activePanel === 'runs' ? 'active' : ''}`} onClick={() => togglePanel('runs')}>
+            <span className="dock-item-icon">🧾</span><span>Runs</span>
+            {agentRuns.some(run => run.status === 'failed' || run.status === 'forward_failed') && <div className="dock-item-badge" />}
           </button>
 
           <button className={`dock-item ${activePanel === 'income' ? 'active' : ''}`} onClick={() => togglePanel('income')}>

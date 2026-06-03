@@ -2644,6 +2644,193 @@ body {
 }
 
 /* ========================================
+   AGENT RUNS
+   ======================================== */
+.agent-runs-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 100%;
+}
+
+.agent-runs-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.agent-run-metric {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+}
+
+.agent-run-metric span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.agent-run-metric strong {
+  color: var(--text-primary);
+  font-size: 20px;
+}
+
+.agent-run-metric.success strong {
+  color: var(--accent-green);
+}
+
+.agent-run-metric.warning strong {
+  color: var(--accent-yellow);
+}
+
+.agent-run-metric.danger strong {
+  color: var(--accent-red);
+}
+
+.agent-runs-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.agent-run-card,
+.agent-run-empty {
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.88));
+  border-radius: 8px;
+  padding: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.agent-run-empty {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  min-height: 140px;
+  display: grid;
+  place-items: center;
+}
+
+.agent-run-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.agent-run-title {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.agent-run-meta,
+.agent-run-detail {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.agent-run-detail {
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 0;
+  margin-bottom: 10px;
+}
+
+.agent-run-status {
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  padding: 4px 8px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.agent-run-status.success {
+  color: var(--accent-green);
+  border-color: rgba(0, 255, 136, 0.35);
+}
+
+.agent-run-status.warning {
+  color: var(--accent-yellow);
+  border-color: rgba(255, 209, 102, 0.35);
+}
+
+.agent-run-status.danger {
+  color: var(--accent-red);
+  border-color: rgba(255, 77, 109, 0.35);
+}
+
+.agent-run-status.neutral {
+  color: var(--text-secondary);
+}
+
+.agent-run-block,
+.agent-run-evidence {
+  margin-top: 10px;
+}
+
+.agent-run-block span,
+.agent-run-evidence span {
+  color: var(--accent-cyan);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.agent-run-block p,
+.agent-run-evidence p,
+.agent-run-evidence li {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.agent-run-block.error p {
+  color: var(--accent-red);
+}
+
+.agent-run-evidence ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+@media (max-width: 900px) {
+  .agent-runs-summary {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .agent-runs-summary .btn {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .agent-runs-list,
+  .agent-runs-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-run-header {
+    flex-direction: column;
+  }
+}
+
+/* ========================================
    BUSINESS OPS
    ======================================== */
 .business-ops {
