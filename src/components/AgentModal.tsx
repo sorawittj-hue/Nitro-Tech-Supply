@@ -145,6 +145,23 @@ export const AgentModal: React.FC<AgentModalProps> = ({ agent, onClose, onUpdate
                 </div>
               </div>
 
+              <div className="modal-info-grid">
+                <div className="info-field">
+                  <span className="info-field-label">Active Hermes Tasks</span>
+                  <div className="info-field-value">
+                    {(agent.activeTools?.length ?? 0) > 0 ? agent.activeTools?.join(', ') : 'No active live task'}
+                  </div>
+                </div>
+                <div className="info-field">
+                  <span className="info-field-label">Waiting State</span>
+                  <div className="info-field-value">
+                    <span className={`badge ${agent.isWaiting ? 'badge-warning' : 'badge-success'}`}>
+                      {agent.isWaiting ? 'WAITING' : 'CLEAR'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="info-field">
                 <span className="info-field-label">Mission</span>
                 <div className="info-field-value">{agent.mission}</div>

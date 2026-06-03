@@ -74,6 +74,43 @@ export function useAgentEvents(options: UseAgentEventsOptions) {
           ));
           break;
         }
+        case 'agent.task.start': {
+          const agentId = canonicalAgentId(message.agentId);
+          options.setAgents(prev => prev.map(agent => {
+            if (agent.id !== agentId) return agent;
+            const currentTools = agent.activeTools ?? [];
+            const activeTools = currentTools.includes(message.taskId)
+              ? currentTools
+              : [...currentTools, message.taskId];
+            return {
+              ...agent,
+              status: 'Working',
+              isLive: true,
+              isWaiting: true,
+              activeTools,
+              lastActiveAt: Date.now(),
+            };
+          }));
+          options.addLog('INFO', `Hermes task started for ${agentId}: ${message.title}`);
+          break;
+        }
+        case 'agent.task.done': {
+          const agentId = canonicalAgentId(message.agentId);
+          options.setAgents(prev => prev.map(agent => {
+            if (agent.id !== agentId) return agent;
+            const activeTools = (agent.activeTools ?? []).filter(taskId => taskId !== message.taskId);
+            return {
+              ...agent,
+              status: activeTools.length > 0 ? 'Working' : 'Idle',
+              isLive: true,
+              isWaiting: activeTools.length > 0,
+              activeTools,
+              lastActiveAt: Date.now(),
+            };
+          }));
+          options.addLog('INFO', `Hermes task completed for ${agentId}: ${message.result || message.taskId}`);
+          break;
+        }
         case 'agent.log':
           options.addLog(message.level, message.message);
           break;
