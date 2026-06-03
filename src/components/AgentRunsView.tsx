@@ -68,6 +68,21 @@ export function AgentRunsView({ runs, agents, onRefresh }: AgentRunsViewProps) {
                 </section>
               ) : null}
 
+              {run.businessActions && run.businessActions.length > 0 ? (
+                <section className="agent-run-actions">
+                  <span>Business Actions</span>
+                  <div>
+                    {run.businessActions.map(action => (
+                      <div key={`${run.id}-${action.type}-${action.id}`} className={`agent-run-action ${action.status}`}>
+                        <strong>{action.status.toUpperCase()}</strong>
+                        <p>{action.type}/{action.id}</p>
+                        <small>{action.detail}</small>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
               <section className="agent-run-evidence">
                 <span>Evidence</span>
                 {run.evidence && run.evidence.length > 0 ? (

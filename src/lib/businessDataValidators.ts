@@ -1,5 +1,6 @@
 import type {
   AffiliateData,
+  AgentRunBusinessAction,
   AgentRunRecord,
   AgentRunStatus,
   AuditEntry,
@@ -241,6 +242,7 @@ export function parseAgentRunData(value: unknown): AgentRunRecord[] {
       detail: readOptionalString(run, 'detail', `agentRuns[${index}].detail`),
       result: readOptionalString(run, 'result', `agentRuns[${index}].result`),
       evidence: readOptionalStringArray(run, 'evidence', `agentRuns[${index}].evidence`),
+      businessActions: readOptionalBusinessActions(run, 'businessActions', `agentRuns[${index}].businessActions`),
       completedAt: readOptionalString(run, 'completedAt', `agentRuns[${index}].completedAt`),
       errorMessage: readOptionalString(run, 'errorMessage', `agentRuns[${index}].errorMessage`),
     };
@@ -302,6 +304,21 @@ function readOptionalStringArray(record: Record<string, unknown>, key: string, l
   return value.map((item, index) => {
     if (typeof item !== 'string') throw new Error(`${label}[${index}] must be a string.`);
     return item;
+  });
+}
+
+function readOptionalBusinessActions(record: Record<string, unknown>, key: string, label: string): AgentRunBusinessAction[] | undefined {
+  const value = record[key];
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array when provided.`);
+  return value.map((item, index) => {
+    if (!isRecord(item)) throw new Error(`${label}[${index}] must be an object.`);
+    return {
+      type: readEnum(item, 'type', ['agent_task'], `${label}[${index}].type`),
+      id: readString(item, 'id', `${label}[${index}].id`),
+      status: readEnum(item, 'status', ['created', 'updated', 'failed'], `${label}[${index}].status`),
+      detail: readString(item, 'detail', `${label}[${index}].detail`),
+    };
   });
 }
 

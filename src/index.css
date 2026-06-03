@@ -2777,11 +2777,13 @@ body {
 }
 
 .agent-run-block,
+.agent-run-actions,
 .agent-run-evidence {
   margin-top: 10px;
 }
 
 .agent-run-block span,
+.agent-run-actions > span,
 .agent-run-evidence span {
   color: var(--accent-cyan);
   display: block;
@@ -2802,6 +2804,53 @@ body {
 
 .agent-run-block.error p {
   color: var(--accent-red);
+}
+
+.agent-run-actions > div {
+  display: grid;
+  gap: 7px;
+}
+
+.agent-run-action {
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.agent-run-action strong {
+  color: var(--text-primary);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  margin-bottom: 3px;
+}
+
+.agent-run-action.created strong {
+  color: var(--accent-green);
+}
+
+.agent-run-action.updated strong {
+  color: var(--accent-yellow);
+}
+
+.agent-run-action.failed strong {
+  color: var(--accent-red);
+}
+
+.agent-run-action p,
+.agent-run-action small {
+  color: var(--text-secondary);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.agent-run-action small {
+  color: var(--text-muted);
+  margin-top: 3px;
 }
 
 .agent-run-evidence ul {

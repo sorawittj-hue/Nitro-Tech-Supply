@@ -177,13 +177,25 @@ const server = http.createServer(async (request, response) => {
         return null;
       });
       const hermesForward = await forwardTransportCommandToHermes(command.value);
+      const businessActions = await materializeBusinessActions(command.value, hermesForward, agentRun).catch(error => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`Failed to materialize business action: ${message}`);
+        return [{
+          type: 'agent_task',
+          id: typeof command.value.taskId === 'string' ? command.value.taskId : agentRun?.id ?? 'unknown',
+          status: 'failed',
+          detail: message,
+        }];
+      });
+      const actionEvidence = businessActions.map(action => `business action ${action.status}: ${action.type}/${action.id}`);
       if (agentRun) {
         await updateAgentRun(agentRun.id, {
           status: normalizeAgentRunStatus(hermesForward.status),
           hermesForwarded: hermesForward.forwarded,
           hermesStatus: hermesForward.status,
           result: hermesForward.result,
-          evidence: hermesForward.evidence,
+          evidence: [...(hermesForward.evidence ?? []), ...actionEvidence],
+          businessActions,
           completedAt: hermesForward.forwarded ? new Date().toISOString() : undefined,
           errorMessage: hermesForward.errorMessage,
           updatedAt: new Date().toISOString(),
@@ -199,7 +211,8 @@ const server = http.createServer(async (request, response) => {
         hermesForwarded: hermesForward.forwarded,
         hermesStatus: hermesForward.status,
         result: hermesForward.result ?? null,
-        evidence: hermesForward.evidence ?? [],
+        evidence: [...(hermesForward.evidence ?? []), ...actionEvidence],
+        businessActions,
       });
       return;
     }
@@ -429,6 +442,97 @@ async function updateAgentRun(id, patch) {
   }
 }
 
+async function materializeBusinessActions(command, hermesForward, agentRun) {
+  if (!DATA_API_URL || DATA_API_URL.startsWith('/')) return [];
+  if (command.type !== 'agent.task.assign') return [];
+  if (typeof command.agentId !== 'string' || typeof command.title !== 'string') return [];
+
+  const taskId = typeof command.taskId === 'string' && command.taskId.trim()
+    ? command.taskId.trim()
+    : makeAgentTaskId(agentRun?.id);
+  const priority = normalizeTaskPriority(command.priority);
+  const detailParts = [
+    hermesForward.forwarded ? 'Hermes accepted this CEO task.' : `Hermes status: ${hermesForward.status}.`,
+  ];
+  if (typeof command.detail === 'string' && command.detail.trim()) {
+    detailParts.push(command.detail.trim());
+  }
+  if (typeof hermesForward.result === 'string' && hermesForward.result.trim()) {
+    detailParts.push(`Hermes: ${hermesForward.result.trim().slice(0, 500)}`);
+  }
+
+  const taskPayload = {
+    id: taskId,
+    agentId: command.agentId,
+    title: command.title.trim(),
+    status: 'todo',
+    priority,
+    source: 'hermes',
+    createdAt: new Date().toISOString(),
+    dueAt: typeof command.dueAt === 'string' ? command.dueAt : undefined,
+  };
+
+  const existingTasks = await fetchJsonData(`/agentTasks?id=${encodeURIComponent(taskId)}`);
+  const existing = Array.isArray(existingTasks) && existingTasks.length > 0 ? existingTasks[0] : null;
+  if (existing && typeof existing.id === 'string') {
+    const updatePayload = {
+      agentId: taskPayload.agentId,
+      title: taskPayload.title,
+      priority: taskPayload.priority,
+      source: taskPayload.source,
+      dueAt: taskPayload.dueAt,
+    };
+    await writeDataRecord(`/agentTasks/${encodeURIComponent(existing.id)}`, 'PATCH', updatePayload);
+    return [{
+      type: 'agent_task',
+      id: taskId,
+      status: 'updated',
+      detail: `Updated agent task for ${command.agentId}: ${taskPayload.title}`,
+    }];
+  }
+
+  await writeDataRecord('/agentTasks', 'POST', taskPayload);
+  return [{
+    type: 'agent_task',
+    id: taskId,
+    status: 'created',
+    detail: detailParts.join(' '),
+  }];
+}
+
+async function fetchJsonData(pathname) {
+  const response = await fetchWithRetry(`${DATA_API_URL}${pathname}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`${pathname} returned ${response.status}`);
+  return response.json();
+}
+
+async function writeDataRecord(pathname, method, payload) {
+  const response = await fetchWithRetry(`${DATA_API_URL}${pathname}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`${method} ${pathname} returned ${response.status}`);
+}
+
+async function fetchWithRetry(url, init, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetch(url, init);
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await delay(150 * attempt);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function normalizeAgentRunStatus(status) {
   if (status === 'forwarded') return 'forwarded';
   if (status === 'not_forwardable') return 'not_forwardable';
@@ -537,6 +641,14 @@ function summarizeTransportCommand(command) {
   if (typeof command.taskId === 'string') parts.push(`task=${command.taskId}`);
   if (typeof command.title === 'string') parts.push(`title=${command.title.slice(0, 120)}`);
   return parts.join(' ');
+}
+
+function normalizeTaskPriority(value) {
+  return value === 'low' || value === 'medium' || value === 'high' ? value : 'medium';
+}
+
+function makeAgentTaskId(runId) {
+  return `task-${runId || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`;
 }
 
 function readBody(request) {
