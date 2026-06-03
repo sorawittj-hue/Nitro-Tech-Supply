@@ -1,5 +1,7 @@
 import type {
   AffiliateData,
+  AgentRunRecord,
+  AgentRunStatus,
   AuditEntry,
   ClaimRecord,
   CompanyAgentTask,
@@ -221,6 +223,26 @@ export function parseCompanyAgentTaskData(value: unknown): CompanyAgentTask[] {
   });
 }
 
+export function parseAgentRunData(value: unknown): AgentRunRecord[] {
+  if (!Array.isArray(value)) throw new Error('Agent runs payload must be an array.');
+  return value.map((run, index) => {
+    if (!isRecord(run)) throw new Error(`Agent run ${index} must be an object.`);
+    return {
+      id: readString(run, 'id', `agentRuns[${index}].id`),
+      commandType: readString(run, 'commandType', `agentRuns[${index}].commandType`),
+      agentId: readOptionalString(run, 'agentId', `agentRuns[${index}].agentId`),
+      taskId: readOptionalString(run, 'taskId', `agentRuns[${index}].taskId`),
+      title: readOptionalString(run, 'title', `agentRuns[${index}].title`),
+      status: readAgentRunStatus(run, 'status', `agentRuns[${index}].status`),
+      hermesForwarded: readBoolean(run, 'hermesForwarded', `agentRuns[${index}].hermesForwarded`),
+      hermesStatus: readString(run, 'hermesStatus', `agentRuns[${index}].hermesStatus`),
+      createdAt: readString(run, 'createdAt', `agentRuns[${index}].createdAt`),
+      updatedAt: readString(run, 'updatedAt', `agentRuns[${index}].updatedAt`),
+      detail: readOptionalString(run, 'detail', `agentRuns[${index}].detail`),
+    };
+  });
+}
+
 export function parseAuditLogData(value: unknown): AuditEntry[] {
   if (!Array.isArray(value)) throw new Error('Audit logs payload must be an array.');
   return value.map((entry, index) => {
@@ -314,6 +336,10 @@ function readOptionalEnum<const T extends string>(
     throw new Error(`${label} must be one of: ${allowed.join(', ')} when provided.`);
   }
   return value as T;
+}
+
+function readAgentRunStatus(record: Record<string, unknown>, key: string, label: string): AgentRunStatus {
+  return readEnum(record, key, ['accepted', 'forwarded', 'not_forwardable', 'not_configured', 'forward_failed', 'failed'], label);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

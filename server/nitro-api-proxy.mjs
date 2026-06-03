@@ -33,6 +33,7 @@ const DATA_ENDPOINTS = new Set([
   '/shipments',
   '/claims',
   '/agentTasks',
+  '/agentRuns',
   '/auditLogs',
   '/chatMessages',
 ]);
@@ -170,9 +171,24 @@ const server = http.createServer(async (request, response) => {
         detail: summarizeTransportCommand(command.value),
         status: 202,
       });
+      const agentRun = await createAgentRun(command.value).catch(error => {
+        console.warn(`Failed to create agent run: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+      });
       const hermesForward = await forwardTransportCommandToHermes(command.value);
+      if (agentRun) {
+        await updateAgentRun(agentRun.id, {
+          status: normalizeAgentRunStatus(hermesForward.status),
+          hermesForwarded: hermesForward.forwarded,
+          hermesStatus: hermesForward.status,
+          updatedAt: new Date().toISOString(),
+        }).catch(error => {
+          console.warn(`Failed to update agent run ${agentRun.id}: ${error instanceof Error ? error.message : String(error)}`);
+        });
+      }
       sendJson(response, 202, {
         ok: true,
+        runId: agentRun?.id ?? null,
         acceptedAt: new Date().toISOString(),
         type: command.value.type,
         hermesForwarded: hermesForward.forwarded,
@@ -311,6 +327,55 @@ async function forwardTransportCommandToHermes(command) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function createAgentRun(command) {
+  if (!DATA_API_URL || DATA_API_URL.startsWith('/')) return null;
+  const now = new Date().toISOString();
+  const run = {
+    id: makeAgentRunId(),
+    commandType: command.type,
+    agentId: typeof command.agentId === 'string' ? command.agentId : undefined,
+    taskId: typeof command.taskId === 'string' ? command.taskId : undefined,
+    title: typeof command.title === 'string' ? command.title : undefined,
+    status: 'accepted',
+    hermesForwarded: false,
+    hermesStatus: 'pending',
+    createdAt: now,
+    updatedAt: now,
+    detail: summarizeTransportCommand(command),
+  };
+
+  const response = await fetch(`${DATA_API_URL}/agentRuns`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(run),
+  });
+
+  if (!response.ok) {
+    throw new Error(`agentRuns API returned ${response.status}`);
+  }
+  return run;
+}
+
+async function updateAgentRun(id, patch) {
+  if (!DATA_API_URL || DATA_API_URL.startsWith('/')) return;
+  const response = await fetch(`${DATA_API_URL}/agentRuns/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) {
+    throw new Error(`agentRuns/${id} API returned ${response.status}`);
+  }
+}
+
+function normalizeAgentRunStatus(status) {
+  if (status === 'forwarded') return 'forwarded';
+  if (status === 'not_forwardable') return 'not_forwardable';
+  if (status === 'not_configured') return 'not_configured';
+  if (status === 'forward_failed') return 'forward_failed';
+  return status.startsWith('hermes_') ? 'failed' : 'failed';
 }
 
 function shouldForwardTransportCommand(type) {
@@ -489,6 +554,10 @@ function writeAuditLog({ request, action, detail, status }) {
 
 function makeAuditId() {
   return `audit-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function makeAgentRunId() {
+  return `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function readClientIp(request) {

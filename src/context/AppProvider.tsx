@@ -7,6 +7,7 @@ import type { ChatProviderConfig, ChatProviderId } from '../providers/types';
 import { useAgentEvents } from '../hooks/useAgentEvents';
 import { transport } from '../transport';
 import {
+  parseAgentRunData,
   parseAffiliateData,
   parseAuditLogData,
   parseClaimData,
@@ -29,6 +30,7 @@ import {
   type InventoryItem, 
   type OrderItem, 
   type AffiliateData, 
+  type AgentRunRecord,
   type FinanceData, 
   type NitroHealthStatus,
   type CustomerRecord,
@@ -82,6 +84,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [shipments, setShipments] = useState<ShipmentRecord[]>([]);
   const [claims, setClaims] = useState<ClaimRecord[]>([]);
   const [companyAgentTasks, setCompanyAgentTasks] = useState<CompanyAgentTask[]>([]);
+  const [agentRuns, setAgentRuns] = useState<AgentRunRecord[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<string>('—');
   const [isOffline, setIsOffline] = useState<boolean>(false);
@@ -168,6 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         shipmentData,
         claimData,
         agentTaskData,
+        agentRunData,
         auditLogData,
       ] = await Promise.all([
         fetchJson(`${apiBase}/inventory`, parseInventoryData, 'Inventory'),
@@ -183,6 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchJson(`${apiBase}/shipments`, parseShipmentData, 'Shipments'),
         fetchJson(`${apiBase}/claims`, parseClaimData, 'Claims'),
         fetchJson(`${apiBase}/agentTasks`, parseCompanyAgentTaskData, 'Agent tasks'),
+        fetchJson(`${apiBase}/agentRuns`, parseAgentRunData, 'Agent runs'),
         fetchJson(`${apiBase}/auditLogs`, parseAuditLogData, 'Audit logs'),
       ]);
 
@@ -199,6 +204,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setShipments(shipmentData);
       setClaims(claimData);
       setCompanyAgentTasks(agentTaskData);
+      setAgentRuns(agentRunData.slice(-100));
       setAuditLog(auditLogData.slice(-200));
       setIsOffline(false);
       
@@ -220,6 +226,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setShipments([]);
       setClaims([]);
       setCompanyAgentTasks([]);
+      setAgentRuns([]);
       setAuditLog([]);
       
       const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -554,6 +561,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     shipments,
     claims,
     companyAgentTasks,
+    agentRuns,
     loadingData,
     lastUpdated,
     isOffline,

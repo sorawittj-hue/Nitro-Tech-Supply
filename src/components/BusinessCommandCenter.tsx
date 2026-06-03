@@ -48,6 +48,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     shipments,
     claims,
     companyAgentTasks,
+    agentRuns,
     loadingData,
     isOffline,
     lastUpdated,
@@ -108,6 +109,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
     || shipments.length > 0
     || claims.length > 0
     || companyAgentTasks.length > 0
+    || agentRuns.length > 0
     || (finance?.cashOnHand ?? 0) > 0
     || (affiliate?.conversions ?? 0) > 0
     || (affiliate?.revenueTHB ?? 0) > 0;
@@ -198,7 +200,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
         id: 'ai',
         label: 'AI Brain',
         status: aiReady ? 'ready' : 'waiting',
-        detail: aiReady ? `${chatProvider.toUpperCase()} selected. ${companyAgentTasks.length} company tasks tracked.` : 'Configure Hermes or MiMo before delegating work.',
+        detail: aiReady ? `${chatProvider.toUpperCase()} selected. ${agentRuns.length} command receipts tracked.` : 'Configure Hermes or MiMo before delegating work.',
         actionLabel: 'Chat',
         target: 'chat',
       },
@@ -206,7 +208,7 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
   }, [
     affiliate,
     chatProvider,
-    companyAgentTasks.length,
+    agentRuns.length,
     customers.length,
     finance,
     hermesConnected,
@@ -451,6 +453,23 @@ export function BusinessCommandCenter({ agents, onSelectAgent, onNavigate }: Bus
       </div>
 
       <div className="command-grid three">
+        <section className="command-section">
+          <div className="panel-card-header">
+            <span className="panel-card-title">COMMAND RECEIPTS</span>
+            <span className="badge badge-info">{agentRuns.length}</span>
+          </div>
+          <div className="compact-list">
+            {agentRuns.length === 0 ? (
+              <span className="muted-line">No CEO command receipts yet.</span>
+            ) : agentRuns.slice(-5).reverse().map(run => (
+              <div key={run.id} className="compact-row">
+                <span>{run.title || run.commandType}</span>
+                <strong>{run.status.toUpperCase()}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="command-section">
           <div className="panel-card-header">
             <span className="panel-card-title">LOW STOCK WATCH</span>

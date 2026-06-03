@@ -138,6 +138,22 @@ export interface CompanyAgentTask {
   dueAt?: string;
 }
 
+export type AgentRunStatus = 'accepted' | 'forwarded' | 'not_forwardable' | 'not_configured' | 'forward_failed' | 'failed';
+
+export interface AgentRunRecord {
+  id: string;
+  commandType: string;
+  agentId?: string;
+  taskId?: string;
+  title?: string;
+  status: AgentRunStatus;
+  hermesForwarded: boolean;
+  hermesStatus: string;
+  createdAt: string;
+  updatedAt: string;
+  detail?: string;
+}
+
 export interface AuditEntry {
   id: string;
   timestamp: string;
@@ -191,6 +207,7 @@ export interface AppState {
   shipments: ShipmentRecord[];
   claims: ClaimRecord[];
   companyAgentTasks: CompanyAgentTask[];
+  agentRuns: AgentRunRecord[];
   loadingData: boolean;
   lastUpdated: string;
   isOffline: boolean;
@@ -214,6 +231,7 @@ export type BusinessCollection =
   | 'shipments'
   | 'claims'
   | 'agentTasks'
+  | 'agentRuns'
   | 'auditLogs'
   | 'chatMessages';
 
